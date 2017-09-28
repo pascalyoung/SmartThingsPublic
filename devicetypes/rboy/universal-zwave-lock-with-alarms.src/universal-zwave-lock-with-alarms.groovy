@@ -11,15 +11,24 @@
  */ 
  
 def clientVersion() {
-    return "03.01.02"
+    return "03.03.03"
 }
 
 /*
- * Modified by RBoy, SmartThings Z-Wave lock base code as of 2016-6-1
- * Changes Copyright RBoy, redistribution of any changes or modified code is not allowed without permission
- * Works with all Z-Wave Locks including Schlage, Yale, Kiwkset, Monoprice and IDLock
+ * Modified by RBoy Apps, SmartThings Z-Wave lock base code as of 2016-6-1
+ * Changes Copyright RBoy Apps, redistribution of any changes or modified code is not allowed without permission
+ * Works with all Z-Wave Locks including Schlage, Yale, Kiwkset, Monoprice, DanaLock and IDLock
  *
  * Change Log
+ * 2017-5-23 - (v03.03.03) Added support for reporting Yale RFID tags/user slots
+ * 2017-5-23 - (v03.03.02) Added support for FE599 series invalid code detection
+ * 2017-5-4 - (v03.03.01) Updated color scheme to match ST UX recommendations
+ * 2017-4-19 - (v.03.02.03) Added more Yale fingerprints for Yale Assure Lock and patch for Yale Master Code reporting (code 0 and code 251)
+ * 2017-3-13 - (v.3.2.2) Don't show unknown and reset states in the recently logs of device
+ * 2017-2-25 - (v3.2.2) Added fingerprints and identification for Yale Conexis L1
+ * 2017-2-3 - (v3.2.1) Fix for IDE some users were facing while installing the device handler
+ * 2017-1-21 - (v3.2.0) Added support for Yale commercial locks (e.g. nexTouch) and tiles for DPS sensor, tampering and fire/smoke alarm
+ * 2017-1-2 - (v3.1.3) Added ability to report door state for IDLock and Yale DPS, Motion Sensor (Schlage) and Smoke Detector (IDLock) capabilties also need to be uncommented if required
  * 2016-11-2 - Added capability tamper alert and improved tamper detection
  * 2016-10-23 - Added ability to check for new code versions, check for Yale duplicate codes and read Schlage pin code lengths and save it in `pinLength`
  * 2016-10-21 - Added support for Danalock including RF and Keypad
@@ -88,26 +97,10 @@ def clientVersion() {
  * 2015-1-20 - Added support for door jammed status using capability "invalidCode"
  *
  */
-  
- /**
- *  Z-Wave Lock
- *
- *  Copyright 2014 SmartThings
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License. You may obtain a copy of the License at:
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *  for the specific language governing permissions and limitations under the License.
- *
- */
  
 metadata {
 	// Automatically generated. Make future change here.
-	definition (name: "Universal Z-Wave Lock With Alarms", namespace: "rboy", author: "RBoy") {
+	definition (name: "Universal Z-Wave Lock With Alarms", namespace: "rboy", author: "RBoy Apps") {
 		capability "Actuator"
 		capability "Lock"
 		capability "Polling"
@@ -115,9 +108,10 @@ metadata {
 		capability "Sensor"
 		capability "Lock Codes"
 		capability "Battery"
-        capability "Motion Sensor" // replace with Tamper Alert
-        capability "Smoke Detector"
         capability "Tamper Alert"
+        capability "Smoke Detector" //  Fire/Smoke Sensor alerts for IDLock
+        capability "Contact Sensor" // Door Open/Close state capability for IDlock and Yale DPS
+        //capability "Motion Sensor" // replaced with Tamper Alert (Uncomment this to report as Motion Sensor for tamper alarm alerts for Schlage)
         //capability "Switch" // Uncomment this to enable Switch capability interfaces on lock
         
         attribute "alarm", "string"
@@ -130,6 +124,8 @@ metadata {
         attribute "pinLength", "number"
         attribute "codeVersion", "string"
         attribute "dhName", "string"
+        attribute "contactX", "string"
+       
 
 		command "unlockwtimeout"
         command "alarmToggle"
@@ -177,14 +173,16 @@ metadata {
         fingerprint type:"4003", cc:"72,86,98", mfr:"0109", prod:"0001", model:"0000", deviceJoinName:"Yale Real Living Push Button Lever Lock"
         fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0001", model:"0000", deviceJoinName:"Yale Real Living Push Button Lever Lock"
         fingerprint type:"4003", cc:"72,86,98", mfr:"0109", prod:"0004", model:"0000", deviceJoinName:"Yale Real Living Push Button Deadbolt"
-        fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0004", model:"0000", deviceJoinName:"Yale Real Living Push Button Deadbolt"
+        fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0004", model:"0000", deviceJoinName:"Yale Real Living Push Button Deadbolt" // YRD 210
         fingerprint type:"4003", cc:"72,86,98", mfr:"0109", prod:"0004", model:"0800", deviceJoinName:"Yale YRD110"
         fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0004", model:"0800", deviceJoinName:"Yale YRD110"
         fingerprint type:"4003", cc:"72,86,98", mfr:"0109", prod:"0002", model:"0800", deviceJoinName:"Yale YRD120"
         fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0002", model:"0800", deviceJoinName:"Yale YRD120"
-        fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0006", model:"0000", deviceJoinName:"Yale Keyfree Connected" // UK
-        fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0007", model:"0000", deviceJoinName:"Yale Keyless Connected YD-01" // UK
+        fingerprint type:"4003", cc:"5E,72,98,5A,73,86", mfr:"0129", prod:"8002", model:"1600", deviceJoinName:"Yale Assure with Bluetooth (YRD446-NR-605)"
+        fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0006", model:"0000", deviceJoinName:"Yale Keyfree Connected/Conexis L1" // UK
+        fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0007", model:"0000", deviceJoinName:"Yale Keyless Connected YD-01" // UK - YD-01-CON-ZW-CH
         fingerprint type:"4003", cc:"72,86,98", mfr:"0129", prod:"0040", model:"0000", deviceJoinName:"Yale YDM3168" // Italy
+        fingerprint type:"4003", cc:"5E,72,98,5A,73,86", sec:"80,62,85,59,71,70,63,8A,8B,4C,4E,7A", mfr:"0129", prod:"8001", model:"0B00", deviceJoinName:"Yale nexTouch Wireless Touchscreen" // Yale Commercial
         fingerprint type:"4003", cc:"5E,72,98,5A,80,73,70", sec:"86,62,63,85,59,71,7A", mfr:"0230", prod:"0003", model:"0001", deviceJoinName:"IDLock 101 Z-Wave/RFID Lock"
         fingerprint type:"4003", cc:"5E,72,98,5A,80,73,70", sec:"86,62,63,85,59,71,7A", mfr:"0230", prod:"0003", deviceJoinName:"IDLock Z-Wave/RFID Lock"
         fingerprint type:"4003", mfr:"010E", prod:"0008", model:"0002", cc:"5E,72,98,5A,80,73,22", deviceJoinName:"DanaLock V2 BLE, Z-Wave EU" // Circle
@@ -207,6 +205,8 @@ metadata {
         input("yaleWrongCodeLimit", "number", title:"Wrong code entry limit", description: "Wrong code entry limit", defaultValue: "5", range: "1..7", required: false, displayDuringSetup: false)
         input title: "", description: "Number of seconds after which the lock will automatically relock when AutoLock is enabled", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input("yaleRelockTime", "number", title:"AutoLock time", description: "Seconds after which the lock will relock", defaultValue: "30", range: "5..255", required: false, displayDuringSetup: false)
+        input title: "", description: "Enable this if your lock is equipped with a door positioning sensor to sense open/closed doors", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        input("yaleDPS", "bool", title:"DPS", description: "Door Positioning Sensor", defaultValue: "false", required: false, displayDuringSetup: false)
         input title: "", description: "", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input title: "", description: "DANALOCK CONFIGURATION OPTIONS", displayDuringSetup: false, type: "paragraph", element: "paragraph", required: true
         input title: "", description: "Turning speed (torque) of motor", displayDuringSetup: false, type: "paragraph", element: "paragraph"
@@ -222,10 +222,10 @@ metadata {
     tiles(scale: 2) {
 		multiAttributeTile(name:"toggle", type: "generic", width: 6, height: 4){
 			tileAttribute ("device.lock", key: "PRIMARY_CONTROL") {
-                attributeState "locked", label:'locked', action:"lock.unlock", icon:"st.locks.lock.locked", backgroundColor:"#79b821", nextState:"unlocking"
-                attributeState "unlocked", label:'unlocked', action:"lock.lock", icon:"st.locks.lock.unlocked", backgroundColor:"#ea9900", nextState:"locking"
-                attributeState "unknown", label:"jammed", action:"lock.lock", icon:"st.locks.lock.unknown", backgroundColor:"#ff3333", nextState:"locking"
-                attributeState "locking", label:'locking', icon:"st.locks.lock.locked", backgroundColor:"#79b821"
+                attributeState "locked", label:'locked', action:"lock.unlock", icon:"st.locks.lock.locked", backgroundColor:"#00a0dc", nextState:"unlocking"
+                attributeState "unlocked", label:'unlocked', action:"lock.lock", icon:"st.locks.lock.unlocked", backgroundColor:"#ffffff", nextState:"locking"
+                attributeState "unknown", label:"jammed", action:"lock.lock", icon:"st.locks.lock.unknown", backgroundColor:"#e86d13", nextState:"locking"
+                attributeState "locking", label:'locking', icon:"st.locks.lock.locked", backgroundColor:"#00a0dc"
                 attributeState "unlocking", label:'unlocking', icon:"st.locks.lock.unlocked", backgroundColor:"#ffffff"
 			}
 			tileAttribute ("device.lockStatus", key: "SECONDARY_CONTROL") {
@@ -233,13 +233,13 @@ metadata {
             }
 		}
         standardTile("lock", "device.lock", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'Lock', action:"lock.lock", icon:"st.locks.lock.locked", nextState:"locking"
+			state "default", label:'Lock', action:"lock.lock", icon:"st.locks.lock.locked"
 		}
 		standardTile("unlock", "device.lock", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'Unlock', action:"lock.unlock", icon:"st.locks.lock.unlocked", nextState:"unlocking"
+			state "default", label:'Unlock', action:"lock.unlock", icon:"st.locks.lock.unlocked"
 		}
 		standardTile("alarm", "device.alarm", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "unknown", label:"", icon:"", nextState:"workingoff", backgroundColor:"#ffffff", defaultState: true
+			state "unknown", label:'', icon:"", nextState:"workingoff", backgroundColor:"#ffffff", defaultState: true
 			state "off", label:'Alarm Off', action:"alarmToggle", icon:"http://smartthings.rboyapps.com/images/SecurityOff.png", nextState:"workingoff"
 			state "alert", label:'Alert Mode', action:"alarmToggle", icon:"http://smartthings.rboyapps.com/images/SecurityOn.png", nextState:"workingon"
 			state "tamper", label:'Tamper Mode', action:"alarmToggle", icon:"http://smartthings.rboyapps.com/images/SecurityOn.png", nextState:"workingon"
@@ -248,28 +248,28 @@ metadata {
 			state "workingon", label:'...', icon:"http://smartthings.rboyapps.com/images/SecurityOn.png", backgroundColor:"#ffffff"
 		}
 		standardTile("sensitive", "device.sensitive", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "unknown", label:"", icon:"", nextState:"working", backgroundColor:"#ffffff", defaultState: true
+			state "unknown", label:'', icon:"", nextState:"working", backgroundColor:"#ffffff", defaultState: true
 			state "highest", label:'Highest Sensitivity', action:"sensitiveToggle", icon:"http://smartthings.rboyapps.com/images/Sensitivity.png", nextState:"working"
 			state "high", label:'High Sensitivity', action:"sensitiveToggle", icon:"http://smartthings.rboyapps.com/images/Sensitivity.png", nextState:"working"
 			state "medium", label:'Medium Sensitivity', action:"sensitiveToggle", icon:"http://smartthings.rboyapps.com/images/Sensitivity.png", nextState:"working"
 			state "low", label:'Low Sensitivity', action:"sensitiveToggle", icon:"http://smartthings.rboyapps.com/images/Sensitivity.png", nextState:"working"
 			state "lowest", label:'Lowest Sensitivity', action:"sensitiveToggle", icon:"http://smartthings.rboyapps.com/images/Sensitivity.png", nextState:"working"
-			state "working", label:"...", icon:"http://smartthings.rboyapps.com/images/Sensitivity.png", backgroundColor:"#ffffff"
+			state "working", label:'...', icon:"http://smartthings.rboyapps.com/images/Sensitivity.png", backgroundColor:"#ffffff"
 		}
 		standardTile("codeunlock", "device.codeunlock", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "unknown", label:"", icon:"", backgroundColor:"#ffffff", nextState:"working", defaultState: true
+			state "unknown", label:'', icon:"", backgroundColor:"#ffffff", nextState:"working", defaultState: true
 			state "enabled", label:'Code Entry On', action:"disableKeypad", icon:"st.unknown.zwave.remote-controller", backgroundColor:"#ffffff", nextState:"working"
-			state "disabled", label:'Code Off', action:"enableKeypad", icon:"st.unknown.zwave.remote-controller", backgroundColor:"#fd5050", nextState:"working"
-			state "working", label:"...", icon:"st.unknown.zwave.remote-controller", backgroundColor:"#79b8ff"
+			state "disabled", label:'Code Off', action:"enableKeypad", icon:"st.unknown.zwave.remote-controller", backgroundColor:"#00a0dc", nextState:"working"
+			state "working", label:'...', icon:"st.unknown.zwave.remote-controller", backgroundColor:"#cccccc"
 		}
 		standardTile("autolock", "device.autolock", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "unknown", label:"", icon:"", backgroundColor:"#ffffff", nextState:"working", defaultState: true
-			state "enabled", label:'AutoLock', action:"disableAutolock", icon:"st.contact.contact.closed", backgroundColor:"#79b821", nextState:"working"
+			state "unknown", label:'', icon:"", backgroundColor:"#ffffff", nextState:"working", defaultState: true
+			state "enabled", label:'AutoLock', action:"disableAutolock", icon:"st.contact.contact.closed", backgroundColor:"#00a0dc", nextState:"working"
 			state "disabled", label:'AutoLock Off', action:"enableAutolock", icon:"st.contact.contact.closed", nextState:"working"
-			state "working", label:"...", icon:"st.contact.contact.closed", backgroundColor:"#79b8ff"
+			state "working", label:'...', icon:"st.contact.contact.closed", backgroundColor:"#cccccc"
 		}
 		standardTile("beeper", "device.beeper", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "unknown", label:"", icon:"", backgroundColor:"#ffffff", nextState:"workingoff", defaultState: true
+			state "unknown", label:'', icon:"", backgroundColor:"#ffffff", nextState:"workingoff", defaultState: true
 			state "enabled", label:'Audio On', action:"disableAudio", icon:"st.quirky.spotter.quirky-spotter-sound-on", backgroundColor:"#ffffff", nextState:"workingon"
 			state "disabled", label:'Audio Off', action:"enableAudio", icon:"st.quirky.spotter.quirky-spotter-sound-off", nextState:"workingoff"
 			state "workingoff", label:'...', icon:"st.quirky.spotter.quirky-spotter-sound-off", backgroundColor:"#ffffff"
@@ -289,9 +289,24 @@ metadata {
 		standardTile("refresh", "device.lock", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
 			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
+		standardTile("tamper", "device.tamper", decoration: "flat", width: 2, height: 2) {
+			state "unknown", label:'', icon:"", backgroundColor:"#ffffff", defaultState: true
+			state "detected", label:'TAMPER', backgroundColor:"#e86d13"
+			state "clear", label:'', backgroundColor:"#ffffff"
+		}
+		standardTile("smoke", "device.smoke", decoration: "flat", width: 2, height: 2) {
+			state "unknown", label:'', icon:"", backgroundColor:"#ffffff", defaultState: true
+			state "clear", label:'', icon:"", backgroundColor:"#ffffff", action:"smoke"
+			state "detected", label:'SMOKE', icon:"st.alarm.smoke.smoke", backgroundColor:"#e86d13", action:"clear"
+		}
+		standardTile("contact", "device.contactX", decoration: "flat", width: 2, height: 2) {
+			state "unknown", label:'', icon:"", backgroundColor:"#ffffff", defaultState: true
+			state "open", label: 'OPEN', icon: "st.contact.contact.open", backgroundColor: "#e86d13"
+			state "closed", label: 'CLOSED', icon: "st.contact.contact.closed", backgroundColor: "#00a0dc"
+		}
 
 		main "toggle"
-		details(["toggle", "lock", "unlock", "codeunlock", "autolock", "beeper", "alarm", "sensitive", "battery", "refresh"])
+		details(["toggle", "lock", "unlock", "codeunlock", "autolock", "beeper", "alarm", "sensitive", "battery", "refresh", "contact", "tamper", "smoke"])
 	}
 }
 
@@ -361,12 +376,20 @@ private identifyLockModel() {
         	log.debug "Found Yale Push Button Deadbolt"
             break
             
-        case ~/0129-0006-.*/: // Yale Keyfree Lock
-        	log.debug "Found Yale Keyfree Lock"
+        case ~/0129-0006-.*/: // Yale Keyfree/Conexis L1 Lock
+        	log.debug "Found Yale Keyfree/Conexis L1 Lock"
             break
             
         case ~/0129-0007-.*/: // Yale Keyless Connected YD-01
         	log.debug "Found Yale Keyless Connected YD-01"
+            break
+            
+        case ~/0129-8001-.*/: // Yale nextTouch Wireless Touchscreen
+            log.debug "Found Yale nexTouch"
+            break
+            
+        case ~/0129-8002-.*/: // Yale Assure Lock
+            log.debug "Found Yale Assure"
             break
                         
         case "0090-0001-0642": // Kwikset 916
@@ -418,6 +441,10 @@ def updated() {
 			state.init = true
 		}
         state.configured = false
+        // Reset things which cannot be polled / updated manually
+        resetMotion()
+        resetSmoke()
+        resetState()
         response(refresh()) // Get the updates
 	} catch (e) {
 		log.warn "updated() threw $e"
@@ -499,6 +526,16 @@ def zwaveEvent(DoorLockOperationReport cmd) {
 			result << response(secure(zwave.associationV1.associationGet(groupingIdentifier:1)))
 		}
 	}
+    
+    // IDLock supports reporting door state, see Z-Wave specs check bit 0 for door state
+    if (state.MSR?.startsWith("0230-")) { // IDLock
+        if ((cmd.doorCondition & 1) == 0) { // Door open
+            setState("open", "$device.displayName is open")
+        } else if ((cmd.doorCondition & 1) == 1) { // Door closed
+            setState("closed", "$device.displayName is closed")
+        }
+    }
+    
 	result ? [createEvent(map), *result] : createEvent(map)
 }
 
@@ -511,19 +548,19 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
 			map = [ name: "lock", value: (cmd.zwaveAlarmEvent & 1) ? "locked" : "unlocked" ]
 		}
 		switch(cmd.zwaveAlarmEvent) {
-			case 1:
+			case 1: // Manual lock (Z-Wave specs)
 				map.descriptionText = "$device.displayName was manually locked"
                 map.data = [ type: "manual" ]
 				break
-			case 2:
+			case 2: // Manual unlock (Z-Wave specs)
 				map.descriptionText = "$device.displayName was manually unlocked"
                 map.data = [ type: "manual" ]
 				break
-            case 3: // Danalock RF
+            case 3: // Danalock/Yale RF Lock
                 map.descriptionText = "$device.displayName was locked"
-                map.data = [ type: "rfid" ] // IDLock report starts from 10 for the 1st registered card
+                map.data = [ type: "rfid" ]
             	break
-            case 4:
+            case 4: // RF Unlock
                 if (cmd.eventParameter) { // IDLock RFID and Danalock RF
                     map.descriptionText = "$device.displayName was unlocked with code ${(cmd.eventParameter[0] - (state.MSR?.startsWith("0230-") ? 9 : 0))}"
                     map.data = [ usedCode: (cmd.eventParameter[0] - (state.MSR?.startsWith("0230-") ? 9 : 0)), type: "rfid" ] // IDLock report starts from 10 for the 1st registered card
@@ -532,24 +569,44 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
                     map.data = [ type: "rfid" ]
                 }
             	break
-			case 5:
-				if (cmd.eventParameter) {
+			case 5: // Locked via Keypad
+                if (cmd.alarmType == 18) { // Locked with keypad code (Yale), it doesn't follow Z-Wave specs and eventParameter contains unknown e.g.: [99, 3, 1, 1], locked from outside via keypad (Schlage BE469, alarmLevel=0 for no code lock and leave, alarmLevel=1 for with code)
+                    if (cmd.alarmLevel >= 0) {
+                        map.descriptionText = "$device.displayName was locked with code $cmd.alarmLevel"
+                        map.data = [ usedCode: (state.MSR?.startsWith("0129-") ? (cmd.alarmLevel > 249 ? 0 : cmd.alarmLevel) : cmd.alarmLevel), type: "keypad" ] // Yale locks master code returns 251 and specs allow code upto 0xF9
+                    } else {
+                        map.descriptionText = "$device.displayName was locked"
+                        map.data = [ type: "keypad" ]
+                    }
+                } else if (cmd.eventParameter) {
 					map.descriptionText = "$device.displayName was locked with code ${cmd.eventParameter.first()}"
 					map.data = [ usedCode: cmd.eventParameter[0], type: "keypad" ]
-				} else if (cmd.alarmType == 18) { // locked from outside via keypad (Schlage BE469, alarmLevel=0 for no code lock and leave, alarmLevel=1 for with code)
+				} else {
+                    map.descriptionText = "$device.displayName was locked"
                     map.data = [ type: "keypad" ]
                 }
 				break
-			case 6:
-				if (cmd.eventParameter) {
+			case 6: // Unlocked via Keypad
+                if (cmd.alarmType == 19) { // Unlocked with keypad code (Yale), it doesn't follow Z-Wave specs and eventParameter contains unknown e.g.: [99, 3, 1, 1]
+                    if (cmd.alarmLevel >= 0) {
+                        map.descriptionText = "$device.displayName was unlocked with code $cmd.alarmLevel"
+                        map.data = [ usedCode: (state.MSR?.startsWith("0129-") ? (cmd.alarmLevel > 249 ? 0 : cmd.alarmLevel) : cmd.alarmLevel), type: "keypad" ] // Yale locks master code returns 251 and specs allow code upto 0xF9
+                    } else {
+                        map.descriptionText = "$device.displayName was unlocked"
+                        map.data = [ type: "keypad" ]
+                    }
+                } else if (cmd.eventParameter) {
                     if (cmd.eventParameter[0] == 0) { // IDLock code 0 is remotely unlocked (electronically)
                         map.data = [ type: "remote" ]
                     } else { // non 0 codes are user code based unlock for all locks
                         map.descriptionText = "$device.displayName was unlocked with code ${cmd.eventParameter.first()}"
                         map.data = [ usedCode: cmd.eventParameter[0], type: "keypad" ]
                     }
-				}
-				break
+				} else {
+                    map.descriptionText = "$device.displayName was unlocked"
+                    map.data = [ type: "keypad" ]
+                }
+                break
 			case 9:
 				map.descriptionText = "$device.displayName was autolocked"
         	    map.data = [ type: "auto" ]
@@ -587,7 +644,7 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
 				map = [ name: "codeChanged", descriptionText: "$device.displayName: user code not added, duplicate", isStateChange: true ]
 				break
 			case 0x10:
-				map = [ name: "invalidCode", value: "detected", descriptionText: "$device.displayName: keypad temporarily disabled", isStateChange: true, displayed: true ]
+				map = [ name: "invalidCode", value: "detected", descriptionText: "$device.displayName: code entry attempt limit exceeded, keypad temporarily disabled", isStateChange: true, displayed: true ]
 				break
 			case 0x11:
 				map = [ descriptionText: "$device.displayName: keypad is busy" ]
@@ -601,6 +658,34 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
 			case 0x14: // IDLock invalid RFID code (5 bytes long) and Danalock invalid RF code
 				map = [ name: "invalidCode", value: "detected", descriptionText: "$device.displayName: invalid code ${cmd.eventParameter.join("")}", isStateChange: true, displayed: true ]
 				break
+            case 0x16: // DPS Open
+                setState("open", "$device.displayName is open")
+                map = [ descriptionText: "$device.displayName: DPS Open", displayed: false ]
+                break
+            case 0x17: // DPS Closed
+                setState("closed", "$device.displayName is closed")
+                map = [ descriptionText: "$device.displayName: DPS Closed", displayed: false ]
+                break
+            case 0xFE: // Misc
+                switch(cmd.alarmType) {
+                    case 43: // Yale DPS
+                        if (cmd.alarmLevel == 2) {
+                            setState("open", "$device.displayName is open")
+                            map = [ descriptionText: "$device.displayName: DPS Open", displayed: false ]
+                        }
+                        break
+                    case 161: // Yale tamper alarm
+                        if (cmd.alarmLevel == 2) {
+                            map = [ name: "tamper", value: "detected", descriptionText: "$device.displayName front escutcheon removed", isStateChange: true, displayed: true ]
+                            activateMotion("$device.displayName: Door tampering activity detected")
+                            runIn(60, deactivateMotion) // Clear motion and tamper after 60 seconds, since tamper clear is never sent by a lock
+                        }
+                        break
+                    default:
+                        map = map ?: [ descriptionText: "$device.displayName: Misc event, alarm type $cmd.alarmType", displayed: false ]
+	                    break
+                }
+                break
 			default:
 				map = map ?: [ descriptionText: "$device.displayName: alarm event $cmd.zwaveAlarmEvent", displayed: false ]
 				break
@@ -615,12 +700,12 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
 				break
 			case 1:
 			case 2: // Forced mode Schlage (no reset sent)
-                sendEvent([ name: "motion", value: "active",  descriptionText: "$device.displayName: Door tampering activity detected", displayed: true ])
+                activateMotion("$device.displayName: Door tampering activity detected")
             	runIn(60, deactivateMotion) // Clear motion and tamper after 60 seconds, since tamper clear is never sent by a lock
 				map.descriptionText = "$device.displayName: intrusion attempt detected"
 				break
 			case 3:
-                sendEvent([ name: "motion", value: "active",  descriptionText: "$device.displayName: Door tampering activity detected", displayed: true ])
+                activateMotion("$device.displayName: Door tampering activity detected")
             	runIn(60, deactivateMotion) // Clear motion and tamper after 60 seconds, since tamper clear is never sent by a lock
 				map.descriptionText = "$device.displayName: covering removed"
 				break
@@ -628,7 +713,7 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
 				map = [ name: "invalidCode", value: "detected", descriptionText: "$device.displayName: invalid code", isStateChange: true, displayed: true ]
 				break
 			default:
-                sendEvent([ name: "motion", value: "active",  descriptionText: "$device.displayName: Door tampering activity detected", displayed: true ])
+                activateMotion("$device.displayName: Door tampering activity detected")
             	runIn(60, deactivateMotion) // Clear motion and tamper after 60 seconds, since tamper clear is never sent by a lock
 				map.descriptionText = "$device.displayName: tamper alarm $cmd.zwaveAlarmEvent"
 				break
@@ -636,15 +721,15 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
 	} else switch(cmd.alarmType) {
         case 10: // IDLock fire sensor
         	if (cmd.zwaveAlarmEvent == 2) {
-                map = [ name: "smoke", value: "detected",  descriptionText: "$device.displayName detected Fire", displayed: true ]
+                activateSmoke("$device.displayName detected Fire")
                 runIn(60, deactivateSmoke)
             }
         	break
 		case 18: // Locked with keypad code (Yale)
 			map = [ name: "lock", value: "locked" ]
-			if (cmd.alarmLevel) {
+			if (cmd.alarmLevel >= 0) { // Yale Master Code is 0
 				map.descriptionText = "$device.displayName was locked with code $cmd.alarmLevel"
-				map.data = [ usedCode: cmd.alarmLevel, type: "keypad" ]
+				map.data = [ usedCode: (state.MSR?.startsWith("0129-") ? (cmd.alarmLevel > 249 ? 0 : cmd.alarmLevel) : cmd.alarmLevel), type: "keypad" ] // Yale locks master code returns 251 and specs allow code upto 0xF9
 			} else {
                 map.descriptionText = "$device.displayName was locked"
                 map.data = [ type: "keypad" ]
@@ -676,12 +761,22 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
             runIn(3, reLocked) // The bolt resecures after 3 seconds, send the locked event notification
 		case 19: // Yale unlocked using keypad
 			map = [ name: "lock", value: "unlocked" ]
-			if (cmd.alarmLevel) {
+			if (cmd.alarmLevel >= 0) { // Yale Master code is 0
 				map.descriptionText = "$device.displayName was unlocked with code $cmd.alarmLevel"
-				map.data = [ usedCode: cmd.alarmLevel, type: "keypad" ]
+				map.data = [ usedCode: (state.MSR?.startsWith("0129-") ? (cmd.alarmLevel > 249 ? 0 : cmd.alarmLevel) : cmd.alarmLevel), type: "keypad" ] // Yale locks master code returns 251 and specs allow code upto 0xF9
 			} else {
                 map.descriptionText = "$device.displayName was unlocked"
                 map.data = [ type: "keypad" ]
+            }
+			break
+		case 144: // Yale unlocked using RFID tag
+			map = [ name: "lock", value: "unlocked" ]
+			if (cmd.alarmLevel > 0) {
+				map.descriptionText = "$device.displayName was unlocked with code $cmd.alarmLevel"
+				map.data = [ usedCode: cmd.alarmLevel, type: "rfid" ]
+			} else {
+                map.descriptionText = "$device.displayName was unlocked"
+                map.data = [ type: "rfid" ]
             }
 			break
 		case 22: // Unlocked manually via knob (Yale)
@@ -725,16 +820,17 @@ def zwaveEvent(physicalgraph.zwave.commands.alarmv2.AlarmReport cmd) {
 		case 131:
 			map = [ /*name: "codeChanged", value: cmd.alarmLevel,*/ descriptionText: "$device.displayName code $cmd.alarmLevel is duplicate", isStateChange: false ]
 			break
+        case 96: // Schlage FE599 (alarmType 96, alarmLevel 255)
 		case 161:
 			if (cmd.alarmLevel == 2) {
 				map = [ name: "tamper", value: "detected", descriptionText: "$device.displayName front escutcheon removed", isStateChange: true, displayed: true ]
-		        sendEvent([ name: "motion", value: "active",  descriptionText: "$device.displayName: Door tampering activity detected", displayed: true ])
+		        activateMotion("$device.displayName: Door tampering activity detected")
                 runIn(60, deactivateMotion) // Clear motion and tamper after 60 seconds, since tamper clear is never sent by a lock
 			} else if (cmd.alarmLevel == 1) {
 				map = [ name: "invalidCode", value: "detected", descriptionText: "$device.displayName Keypad attempts exceed code entry limit", isStateChange: true, displayed: true ] // Yale v9 Z-wave CC
 			} else if (cmd.alarmLevel == 3) {
 				map = [ name: "tamper", value: "detected", descriptionText: "$device.displayName handle open detected", isStateChange: true, displayed: true ] // Yale 6th gen Keyfree lock Handle Alarm
-                sendEvent([ name: "motion", value: "active",  descriptionText: "$device.displayName: Door tampering activity detected", displayed: true ])
+                activateMotion("$device.displayName: Door tampering activity detected")
                 runIn(60, deactivateMotion) // Clear motion and tamper after 60 seconds, since tamper clear is never sent by a lock
 			} else {
 				map = [ name: "invalidCode", value: "detected", descriptionText: "$device.displayName detected failed user code attempt", isStateChange: true, displayed: true ]
@@ -960,10 +1056,13 @@ def refresh() {
     sendEvent([name: "dhName", value: "Universal Z-Wave Lock Device Handler"]) // Save DH Name for parent app
 
     if (!device.currentValue("motion")?.trim() || !device.currentValue("tamper")?.trim()) { // If the tamper/motion sensor state isn't defined then lets define it to report it correctly in SHM
-        deactivateMotion()
+        resetMotion()
     }
     if (!device.currentValue("smoke")?.trim()) { // If the smoke/fire sensor state isn't defined then lets define it to report it correctly in SHM
-        deactivateSmoke()
+        resetSmoke()
+    }
+    if (!device.currentValue("contact")?.trim()) { // If the door closed sensor state isn't defined then lets define it to report it correctly in SHM
+        resetState()
     }
 
 	def cmds = []
@@ -1025,10 +1124,13 @@ def poll() {
     sendEvent([name: "dhName", value: "Universal Z-Wave Lock Device Handler"]) // Save DH Name for parent app
 
     if (!device.currentValue("motion")?.trim() || !device.currentValue("tamper")?.trim()) { // If the tamper/motion sensor state isn't defined then lets define it to report it correctly in SHM
-        deactivateMotion()
+        resetMotion()
     }
     if (!device.currentValue("smoke")?.trim()) { // If the smoke/fire sensor state isn't defined then lets define it to report it correctly in SHM
-        deactivateSmoke()
+        resetSmoke()
+    }
+    if (!device.currentValue("contact")?.trim()) { // If the door closed sensor state isn't defined then lets define it to report it correctly in SHM
+        resetState()
     }
 
 	def cmds = []
@@ -1270,6 +1372,7 @@ private danaLockConfigurationReport(cmd) {
                     
                 default:
                 	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
@@ -1319,7 +1422,7 @@ private idLockConfigurationReport(cmd) {
         // Bit 1 Away Mode Status (1: enable)
     	case 1:
         	// Away Mode
-        	map = [name: "codeunlock", descriptionText: "Unlock using code"]
+        	map = [name: "codeunlock", descriptionText: "Keypad"]
             if (cmd.configurationValue[0] & 0x2) { // Away Mode enabled = Keypad disable
                 map.value = "disabled"
             } else {
@@ -1406,24 +1509,7 @@ private yaleConfigurationReport(cmd) {
                     
                 default:
                 	map.value = "unknown"
-                    break
-            }
-            break
-            
-    	case 8: // Vacation mode enabled -> Keypad disabled and vice versa
-        	map = [name: "codeunlock", descriptionText: "Unlock using code"]
-            switch (cmd.configurationValue[0]) {
-            	case 0:
-            		map.value = "enabled"
-                    break
-                    
-                case 1:
-                case 2:
-                    map.value = "disabled"
-                    break
-                    
-                default:
-                	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
@@ -1441,6 +1527,7 @@ private yaleConfigurationReport(cmd) {
                     
                 default:
                 	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
@@ -1451,6 +1538,117 @@ private yaleConfigurationReport(cmd) {
 
     	case 4: // Wrong code entry limit
         	map = [descriptionText: "Wrong code entry tamper alert limit ${cmd.configurationValue[0]}"]
+            break
+
+    	case 5: // Language
+            switch (cmd.configurationValue[0]) {
+            	case 0:
+                    map = [descriptionText: "Language English"]
+                    break
+
+            	case 1:
+                    map = [descriptionText: "Language Spanish"]
+                    break
+
+            	case 2:
+                    map = [descriptionText: "Language French"]
+                    break
+
+            	default:
+                    map = [descriptionText: "Language Unknown: ${cmd.configurationValue[0]}"]
+                    break
+            }
+        	break
+
+    	case 7: // Shutdown time after wrong entries
+        	map = [descriptionText: "Shutdown time ${cmd.configurationValue[0]} seconds"]
+            break
+
+    	case 8: // Vacation mode enabled -> Keypad disabled and vice versa
+        	map = [name: "codeunlock", descriptionText: "Keypad"]
+            switch (cmd.configurationValue[0]) {
+            	case 0:
+            		map.value = "enabled"
+                    break
+                    
+                case 1:
+                case 2:
+                    map.value = "disabled"
+                    break
+                    
+                default:
+                	map.value = "unknown"
+                    map.displayed = false
+                    break
+            }
+            break
+            
+    	case 11: // One touch locking
+            switch (cmd.configurationValue[0]) {
+            	case 0x0:
+                    map = [descriptionText: "One touch locking off"]
+                    break
+
+            	case 0xFF:
+                    map = [descriptionText: "One touch locking on"]
+                    break
+
+            	default:
+                    map = [descriptionText: "One touch locking unknown: ${cmd.configurationValue[0]}"]
+                    break
+            }
+            break
+
+    	case 12: // Privacy button
+            switch (cmd.configurationValue[0]) {
+            	case 0x0:
+                    map = [descriptionText: "Privacy button off"]
+                    break
+
+            	case 0xFF:
+                    map = [descriptionText: "Privacy button on"]
+                    break
+
+            	default:
+                    map = [descriptionText: "Privacy button unknown: ${cmd.configurationValue[0]}"]
+                    break
+            }
+            break
+
+    	case 13: // Lock status LED
+            switch (cmd.configurationValue[0]) {
+            	case 0x0:
+                    map = [descriptionText: "Lock status LED off"]
+                    break
+
+            	case 0xFF:
+                    map = [descriptionText: "Lock status LED on"]
+                    break
+
+            	default:
+                    map = [descriptionText: "Lock status LED unknown: ${cmd.configurationValue[0]}"]
+                    break
+            }
+            break
+
+    	case 18: // Door propped timer
+        	map = [descriptionText: "Door propped ${cmd.configurationValue[0]*10} seconds"]
+            break
+
+    	case 19: // DPS Alarm
+            switch (cmd.configurationValue[0]) {
+            	case 0x0:
+                    map = [descriptionText: "Door position sensor state off"]
+                    break
+
+            	case 0xFF:
+                    map = [descriptionText: "Door position sensor state on"]
+                    break
+
+            	default:
+                    map = [descriptionText: "Door position sensor state unknown: ${cmd.configurationValue[0]}"]
+                    break
+            }
             break
 
         default:
@@ -1484,6 +1682,7 @@ private schlageConfigurationReport(cmd) {
                             
                         default:
 	                		map.value = "unknown"
+                            map.displayed = false
                             break
                     }
                     break
@@ -1494,12 +1693,13 @@ private schlageConfigurationReport(cmd) {
                     
                 default:
                 	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
             
     	case 0x04: // Vacation mode enabled -> Keypad disabled and vice versa
-        	map = [name: "codeunlock", descriptionText: "Unlock using code"]
+        	map = [name: "codeunlock", descriptionText: "Keypad"]
             switch (cmd.configurationValue[0]) {
             	case 0:
             		map.value = "enabled"
@@ -1513,6 +1713,7 @@ private schlageConfigurationReport(cmd) {
                             
                         default:
 	                		map.value = "unknown"
+                            map.displayed = false
                             break
                     }
                     break
@@ -1526,12 +1727,14 @@ private schlageConfigurationReport(cmd) {
                             
                         default:
                             map.value = "unknown"
+                            map.displayed = false
                         	break
                     }
                     break
                     
                 default:
                 	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
@@ -1557,6 +1760,7 @@ private schlageConfigurationReport(cmd) {
                     
                 default:
                 	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
@@ -1588,6 +1792,7 @@ private schlageConfigurationReport(cmd) {
                     
                 default:
                 	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
@@ -1605,6 +1810,7 @@ private schlageConfigurationReport(cmd) {
                     
                 default:
                 	map.value = "unknown"
+                    map.displayed = false
                     break
             }
             break
@@ -1634,7 +1840,7 @@ def getPinLength() {
     } else {
         log.warn "Unsupported device with MSR $state.MSR"
         sendEvent(name: "pinLength", value: 0) // Not supported
-        return
+        return null
     }
 
     switch (state.MSR) { // check if we have a supported device
@@ -1675,7 +1881,7 @@ def getKeypadState() {
         parameter = 1
     } else {
         log.warn "Unsupported device with MSR $state.MSR"
-        sendEvent(name: "codeunlock", value: "") // Not supported
+        sendEvent(name: "codeunlock", value: "", displayed: false) // Not supported
         return
     }
 
@@ -1718,7 +1924,7 @@ def getKeypadState() {
                         
         default:
         	log.debug "Unrecognized device with MSR $state.MSR, CodeUnLock feature may not be available"
-        	sendEvent(name: "codeunlock", value: "") // Not supported
+        	sendEvent(name: "codeunlock", value: "", displayed: false) // Not supported
             break
     }
 
@@ -1859,7 +2065,7 @@ def getAudioState() {
         parameter = 6
     } else {
         log.warn "Unsupported device with MSR $state.MSR"
-        sendEvent(name: "beeper", value: "") // Not supported
+        sendEvent(name: "beeper", value: "", displayed: false) // Not supported
         return
     }
 
@@ -1915,7 +2121,7 @@ def getAudioState() {
                         
         default:
         	log.debug "Unsupported device with MSR $state.MSR, Audio/Beeper feature may not be available"
-        	sendEvent(name: "beeper", value: "") // Not supported
+        	sendEvent(name: "beeper", value: "", displayed: false) // Not supported
             break
     }
     
@@ -2020,7 +2226,7 @@ def getAutolockState() {
         parameter = 5
     } else {
         log.warn "Unsupported device with MSR $state.MSR"
-        sendEvent(name: "autolock", value: "") // Not supported
+        sendEvent(name: "autolock", value: "", displayed: false) // Not supported
         return
     }
 
@@ -2076,7 +2282,7 @@ def getAutolockState() {
                         
         default:
         	log.debug "Unsupported device with MSR $state.MSR, Auto Lock feature may not be available"
-        	sendEvent(name: "autolock", value: "") // Not supported
+        	sendEvent(name: "autolock", value: "", displayed: false) // Not supported
             break
     }
     
@@ -2218,7 +2424,7 @@ def getAlarmLevel() {
             
         default:
         	log.debug "Unsupported device with MSR $state.MSR, Alarm feature may not be available"
-        	sendEvent(name: "alarm", value: "") // Not supported
+        	sendEvent(name: "alarm", value: "", displayed: false) // Not supported
             break
     }
     
@@ -2306,7 +2512,7 @@ def getSensitiveLevel(currentMode) {
             
         default:
         	log.debug "Unsupported device with MSR $state.MSR, Alarm Sensitivity feature may not be available"
-        	sendEvent(name: "sensitive", value: "") // Not supported
+        	sendEvent(name: "sensitive", value: "", displayed: false) // Not supported
         	runIn(5, updateTiles) // Update the alarm status on the tiles after 5 seconds giving it time to register
             break
     }
@@ -2465,6 +2671,10 @@ private yaleConfigureLock() {
         }
     }
     
+    log.debug "${yaleDPS ? "Enabling" : "Disabling"} DPS functionality"
+    cmds << zwave.configurationV1.configurationSet(parameterNumber: 19, configurationValue: [yaleDPS ? 255 : 0])
+    cmds << zwave.configurationV1.configurationGet(parameterNumber: 19)
+    
     cmds ? secureSequence(cmds, 5000) : null
 }
 
@@ -2533,16 +2743,48 @@ private danaLockConfigureLock() {
     cmds ? secureSequence(cmds, 5000) : null
 }
 
+def activateSmoke(String msg) {
+	log.debug "$device.displayName: Activating smoke alarm sensor"
+    sendEvent([ name: "smoke", value: "detected",  descriptionText: msg, displayed: true ])
+}
+
 def deactivateSmoke() {
+	log.debug "$device.displayName: Deactivating smoke alarm sensor" 
+	sendEvent([ name: "smoke", value: "clear",  descriptionText: "$device.displayName: Deactivating smoke/fire alarm sensor", displayed: true ])
+}
+
+def resetSmoke() {
 	log.debug "$device.displayName: Resetting smoke alarm sensor" 
-	def map = [ name: "smoke", value: "clear",  descriptionText: "$device.displayName: Resetting smoke/fire alarm sensor", displayed: true ]
-    sendEvent(map)
+	sendEvent([ name: "smoke", value: "clear",  descriptionText: "$device.displayName: Resetting smoke/fire alarm sensor", displayed: true ])
+}
+
+def activateMotion(String msg) {
+	log.debug "$device.displayName: Activating door tampering activity sensor" 
+	sendEvent([ name: "motion", value: "active",  descriptionText: msg, displayed: true ])
 }
 
 def deactivateMotion() {
+	log.debug "$device.displayName: Deactivating door tampering activity sensor" 
+	sendEvent([ name: "motion", value: "inactive",  descriptionText: "$device.displayName: Deactivating door tampering activity sensor", displayed: true ])
+    sendEvent([ name: "tamper", value: "clear",  descriptionText: "$device.displayName: Deactivating door tampering activity sensor", displayed: true ])
+}
+
+def resetMotion() {
 	log.debug "$device.displayName: Resetting door tampering activity sensor" 
 	sendEvent([ name: "motion", value: "inactive",  descriptionText: "$device.displayName: Resetting door tampering activity sensor", displayed: true ])
     sendEvent([ name: "tamper", value: "clear",  descriptionText: "$device.displayName: Resetting door tampering activity sensor", displayed: true ])
+}
+
+def setState(String position, String msg) {
+    log.debug "$device.displayName: Setting door sensor: $position" 
+    sendEvent([ name: "contact", value: position, descriptionText: msg ])
+    sendEvent([ name: "contactX", value: position, displayed: false ])
+}
+
+def resetState() {
+	log.debug "$device.displayName: Resetting door closed sensor" 
+    sendEvent([ name: "contact", value: "closed", descriptionText: "$device.displayName Resetting door sensor as closed", displayed: true ])
+    sendEvent([ name: "contactX", value: "unknown", displayed: false ])
 }
 
 def reLocked() {
