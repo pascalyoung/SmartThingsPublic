@@ -11,20 +11,28 @@
 */ 
 
 def clientVersion() {
-    return "02.05.02"
+    return "03.00.02"
 }
 
 /*
-* This is the device type code for a z-wave customized thermostat with battery status, humidity, clock set, up-down tiles and icons. For individual customizations look at this thread:
-* http://community.smartthings.com/t/z-wave-customized-thermostat-with-battery-humidity-clock-set-up-down-tiles-and-icons/7284
-* Base code has been take from SmartThings as of Sept 2015
+* This is the device type code for a z-wave customized thermostat with battery status, humidity, clock set, up-down tiles and icons.
+* Base code has been take from SmartThings as of Aug 2017
 *
 * Thermostat with Temperature, Humidity and Auto Time setting
 *
-* Taken from SmartThings base code, thanks to @minollo, enhanced and bugfixed by RBoy
-* Changes Copyright RBoy, redistribution of any changes or modified code is not allowed without permission
+* Copyright RBoy Apps, redistribution or reuse of code is not allowed without permission
 *
 * Change log:
+* 2017-9-25 - (v03.00.02) Added single decimal precision to show temperature reported from thermostats
+* 2017-8-28 - (v03.00.01) Added the quickSetHeat and quickSetCool commands back for backwards compatibility (even thought ST made them redundant) and fix Emergency Heat
+* 2017-8-26 - (v03.00.00) State change reduce duplicate logging and updated base code
+* 2017-5-15 - (v02.07.01) Improved the layout to change background colors based to state of HVAC
+* 2017-5-3 - (v02.07.00) Updated DTH to reflect new attributes changed by ST, added device health check and updated icons
+* 2017-5-3 - (v02.06.00) Harmonized color scheme to match ST, show correct state of fan and operating, added color for Auto Fan on
+* 2017-4-10 - (v2.5.4) Improved summary tile layout hvac status
+* 2017-3-20 - (v2.5.4) Added CT-30 Brown Box MSR/fingerprints
+* 2017-3-12 - (v2.5.3) Fix for 2.3.1 ST Android app broken UI
+* 2017-2-27 - (v2.5.3) Added GoControl signature
 * 2016-11-2 - Added ability to check for new code versions
 * 2016-11-2 - Added ° symbol to the temperature
 * 2016-10-19 - Added more fingerprints for Ct-30 variants
@@ -72,24 +80,9 @@ def clientVersion() {
 *
 */
 
-/**
-*  Z-Wave Thermostat
-*
-*  Copyright 2014 SmartThings
-*
-*  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License. You may obtain a copy of the License at:
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
-*  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
-*  for the specific language governing permissions and limitations under the License.
-*
-*/ 
 metadata {
     // Automatically generated. Make future change here.
-    definition (name: "Z-Wave Thermostat with Temperature, Humidity and Auto Time setting", namespace: "rboy", author: "RBoy") {
+    definition (name: "Z-Wave Thermostat with Temperature, Humidity and Auto Time setting", namespace: "rboy", author: "RBoy Apps") {
         capability "Actuator"
         capability "Temperature Measurement"
         capability "Relative Humidity Measurement"
@@ -102,21 +95,21 @@ metadata {
 
         attribute "thermostatFanState", "string"
         attribute "thermStatus", "string"
+        attribute "fanState", "string"
         attribute "codeVersion", "string"
         attribute "dhName", "string"
 
         command "switchMode"
         command "switchFanMode"
-        command "quickSetCool"
-        command "quickSetHeat"
-        command "refresh"
-        command "heatLevelUp"
-        command "heatLevelDown"
-        command "coolLevelUp"
-        command "coolLevelDown"
+        command "raiseHeatingSetpoint"
+        command "lowerHeatingSetpoint"
+        command "raiseCoolSetpoint"
+        command "lowerCoolSetpoint"
         command "levelUpDown"
         command "levelUp"
         command "levelDown"
+        command "quickSetCool"
+        command "quickSetHeat"
 
         fingerprint deviceId: "0x08"
         fingerprint inClusters: "0x43,0x40,0x44,0x31"
@@ -140,45 +133,10 @@ metadata {
         fingerprint type:"0806", cc:"20,31,40,42,43,44,45,47,70,72,80,81,85,86", mfr:"5254", prod:"0200", model:"8031", deviceJoinName:"ZTS-110 Z-Wave Thermostat"
         fingerprint type:"0806", cc:"20,81,87,72,31,40,42,44,45,43,86,70,80,85", mfr:"0098", prod:"1E12", model:"015E", deviceJoinName:"CT-30 Generic Rev C1 Z-Wave Thermostat"
         fingerprint type:"0806", cc:"20,81,87,72,31,40,42,44,43,86", mfr:"0098", prod:"0001", model:"001E", deviceJoinName:"APX CT-30 Z-Wave Thermostat"
-    }
-
-    // simulator metadata
-    simulator {
-        status "off"			: "command: 4003, payload: 00"
-        status "heat"			: "command: 4003, payload: 01"
-        status "cool"			: "command: 4003, payload: 02"
-        status "auto"			: "command: 4003, payload: 03"
-        status "emergencyHeat"	: "command: 4003, payload: 04"
-
-        status "fanAuto"		: "command: 4403, payload: 00"
-        status "fanOn"			: "command: 4403, payload: 01"
-        status "fanCirculate"	: "command: 4403, payload: 06"
-
-        status "heat 60"        : "command: 4303, payload: 01 09 3C"
-        status "heat 68"        : "command: 4303, payload: 01 09 44"
-        status "heat 72"        : "command: 4303, payload: 01 09 48"
-
-        status "cool 72"        : "command: 4303, payload: 02 09 48"
-        status "cool 76"        : "command: 4303, payload: 02 09 4C"
-        status "cool 80"        : "command: 4303, payload: 02 09 50"
-
-        status "temp 58"        : "command: 3105, payload: 01 2A 02 44"
-        status "temp 62"        : "command: 3105, payload: 01 2A 02 6C"
-        status "temp 70"        : "command: 3105, payload: 01 2A 02 BC"
-        status "temp 74"        : "command: 3105, payload: 01 2A 02 E4"
-        status "temp 78"        : "command: 3105, payload: 01 2A 03 0C"
-        status "temp 82"        : "command: 3105, payload: 01 2A 03 34"
-
-        status "idle"			: "command: 4203, payload: 00"
-        status "heating"		: "command: 4203, payload: 01"
-        status "cooling"		: "command: 4203, payload: 02"
-        status "fan only"		: "command: 4203, payload: 03"
-        status "pending heat"	: "command: 4203, payload: 04"
-        status "pending cool"	: "command: 4203, payload: 05"
-        status "vent economizer": "command: 4203, payload: 06"
-
-        // reply messages
-        reply "2502": "command: 2503, payload: FF"
+        fingerprint type:"0806", cc:"20,87,72,31,40,42,44,43,86", mfr:"0098", prod:"0001", model:"0000", deviceJoinName:"CT-30 Brown Box Z-Wave Thermostat"
+        fingerprint type:"0806", cc:"20,87,72,31,40,42,44,43,86", mfr:"0098", prod:"0001", model:"00FF", deviceJoinName:"CT-30 Brown Box Z-Wave Thermostat"
+        fingerprint type:"0806", cc:"40,42,43,44,45,80,70,31,8F,86,72,85,2C,2B,73,81", mfr:"014F", prod:"5442", model:"5431", deviceJoinName:"GoControl GC-TBZ48 Z-Wave Thermostat"
+        fingerprint mfr:"0039", prod:"0011", model:"0001", deviceJoinName: "Honeywell Z-Wave Thermostat" // Honeywell
     }
 
     preferences {
@@ -196,82 +154,82 @@ metadata {
     tiles(scale: 2) {
         multiAttributeTile(name:"summary", type: "thermostat", width: 6, height: 4){
             tileAttribute ("device.temperature", key: "PRIMARY_CONTROL") {
-                attributeState("temperature", label:'${currentValue}°',
-                               backgroundColors:[
-                                   [value: 31, color: "#153591"],
-                                   [value: 44, color: "#1e9cbb"],
-                                   [value: 59, color: "#90d2a7"],
-                                   [value: 74, color: "#44b621"],
-                                   [value: 84, color: "#f1d801"],
-                                   [value: 95, color: "#d04e00"],
-                                   [value: 96, color: "#bc2323"]
-                               ]
-                              )
+                attributeState("temperature", label:'${currentValue}°', defaultState: true)
             }
             tileAttribute ("device.thermStatus", key: "SECONDARY_CONTROL") {
-                attributeState "thermStatus", label:'${currentValue}'
+                attributeState("thermStatus", label:'${currentValue}', defaultState: true)
             }
             tileAttribute ("device.level", key: "VALUE_CONTROL") {
-                attributeState "default", action: "levelUpDown"
+                attributeState("default", action: "levelUpDown")
                 attributeState("VALUE_UP", action: "levelUp")
                 attributeState("VALUE_DOWN", action: "levelDown")
             }
             tileAttribute("device.thermostatOperatingState", key: "OPERATING_STATE") {
-                attributeState("idle", backgroundColor:"#44b621")
-                attributeState("heating", backgroundColor:"#ffa81e")
-                attributeState("cooling", backgroundColor:"#269bd2")
+                attributeState("idle", backgroundColor:"#cccccc")
+                attributeState("heating", backgroundColor:"#e86d13")
+                attributeState("cooling", backgroundColor:"#00A0DC")
             }
-            tileAttribute("device.thermostatMode", key: "THERMOSTAT_MODE") {
+            /*tileAttribute("device.thermostatMode", key: "THERMOSTAT_MODE") {
                 attributeState("off", label:'${name}')
                 attributeState("heat", label:'${name}')
                 attributeState("cool", label:'${name}')
                 attributeState("auto", label:'${name}')
             }
-            /*tileAttribute("device.heatingSetpoint", key: "HEATING_SETPOINT") {
-attributeState("default", label:'${currentValue}')
-}
-tileAttribute("device.coolingSetpoint", key: "COOLING_SETPOINT") {
-attributeState("default", label:'${currentValue}')
-}*/
+            tileAttribute("device.heatingSetpoint", key: "HEATING_SETPOINT") {
+                attributeState("heatingSetpoint", label:'${currentValue}', defaultState: true)
+            }
+            tileAttribute("device.coolingSetpoint", key: "COOLING_SETPOINT") {
+                attributeState("coolingSetpoint", label:'${currentValue}', defaultState: true)
+            }*/
         }
         valueTile("temperature", "device.temperature", width: 4, height: 4) {
             state("temperature", label:'${currentValue}°',
                   backgroundColors:[
-                      [value: 31, color: "#153591"],
-                      [value: 44, color: "#1e9cbb"],
-                      [value: 59, color: "#90d2a7"],
-                      [value: 74, color: "#44b621"],
-                      [value: 84, color: "#f1d801"],
-                      [value: 95, color: "#d04e00"],
-                      [value: 96, color: "#bc2323"]
-                  ]
+							// Celsius
+							[value: 0, color: "#153591"],
+							[value: 7, color: "#1e9cbb"],
+							[value: 15, color: "#90d2a7"],
+							[value: 23, color: "#44b621"],
+							[value: 28, color: "#f1d801"],
+							[value: 35, color: "#d04e00"],
+							[value: 37, color: "#bc2323"],
+							// Fahrenheit
+							[value: 40, color: "#153591"],
+							[value: 44, color: "#1e9cbb"],
+							[value: 59, color: "#90d2a7"],
+							[value: 74, color: "#44b621"],
+							[value: 84, color: "#f1d801"],
+							[value: 95, color: "#d04e00"],
+							[value: 96, color: "#bc2323"]
+					]
                  )
         }
-        standardTile("mode", "device.thermostatMode", width: 2, height: 2, inactiveLabel: false, canChangeIcon: false) {
-            state "off", label:'Off', action:"switchMode", nextState:"...", icon: "st.Outdoor.outdoor19"
-            state "heat", label:'Heat', action:"switchMode", nextState:"...", icon: "st.Weather.weather14", backgroundColor: '#E14902'
-            state "cool", label:'Cool', action:"switchMode", nextState:"...", icon: "st.Weather.weather7", backgroundColor: '#003CEC'
-            state "auto", label:'Auto', action:"switchMode", nextState:"...", icon: "st.Home.home1"
-            state "emergencyHeat", label:'Emergency Heat', action:"switchMode", nextState:"...", icon: "st.Weather.weather2", backgroundColor: '#E11102'
+        standardTile("mode", "device.thermostatMode", width: 2, height: 2, inactiveLabel: false, canChangeIcon: false, decoration: "flat") {
+            state "off", action:"switchMode", nextState:"...", icon: "st.thermostat.heating-cooling-off"
+            state "heat", action:"switchMode", nextState:"...", icon: "st.thermostat.heat", backgroundColor: '#e86d13'
+            state "cool", action:"switchMode", nextState:"...", icon: "st.thermostat.cool", backgroundColor: '#00a0dc'
+            state "auto", action:"switchMode", nextState:"...", icon: "st.thermostat.auto"
+            state "emergency heat", action:"switchMode", nextState:"...", icon: "st.thermostat.emergency-heat", backgroundColor: '#E11102'
             state "...", label: "...", nextState:"..."
         }
-        standardTile("fanMode", "device.thermostatFanMode", width: 2, height: 2, inactiveLabel: false, canChangeIcon: false) {
-            state "fanAuto", label:'Auto', action:"switchFanMode", nextState:"...", icon: "st.Appliances.appliances11"
-            state "fanOn", label:'On', action:"switchFanMode", nextState:"...", icon: "st.Appliances.appliances11", backgroundColor: '#02E181'
-            state "fanCirculate", label:'Circulate', action:"switchFanMode", nextState:"...", icon: "st.Appliances.appliances11", backgroundColor: '#02D2E1'
+        standardTile("fanMode", "device.fanState", width: 2, height: 2, inactiveLabel: false, canChangeIcon: false, decoration: "flat") {
+            state "autoOff", action:"switchFanMode", nextState:"...", icon: "st.thermostat.fan-auto", defaultState: true
+            state "autoOn", action:"switchFanMode", nextState:"...", icon: "st.thermostat.fan-auto", backgroundColor: '#00f78c'
+            state "on", action:"switchFanMode", nextState:"...", icon: "st.thermostat.fan-on", backgroundColor: '#00f78c'
+            state "circulate", action:"switchFanMode", nextState:"...", icon: "st.thermostat.fan-circulate", backgroundColor: '#02D2E1'
             state "...", label: "...", nextState:"..."
         }
         controlTile("heatSliderControl", "device.heatingSetpoint", "slider", width: 4, height: 1, inactiveLabel: false) {
-            state "setHeatingSetpoint", action:"quickSetHeat", backgroundColor:"#d04e00"
+            state "heat", action:"setHeatingSetpoint", backgroundColor:"#e86d13"
         }
-        valueTile("heatingSetpoint", "device.heatingSetpoint", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state "heat", label:'${currentValue}°', backgroundColor: '#E14902'
+        standardTile("heatingSetpoint", "device.heatingSetpoint", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+            state "heat", label:'${currentValue}°', backgroundColor: '#e86d13'
         }
         controlTile("coolSliderControl", "device.coolingSetpoint", "slider", width: 4, height: 1, inactiveLabel: false) {
-            state "setCoolingSetpoint", action:"quickSetCool", backgroundColor: "#1e9cbb"
+            state "cool", action:"setCoolingSetpoint", backgroundColor: "#00a0dc"
         }
-        valueTile("coolingSetpoint", "device.coolingSetpoint", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state "cool", label:'${currentValue}°', backgroundColor: '#003CEC'
+        standardTile("coolingSetpoint", "device.coolingSetpoint", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+            state "cool", label:'${currentValue}°', backgroundColor: '#00a0dc'
         }
         standardTile("refresh", "command.refresh", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
             state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -279,17 +237,17 @@ attributeState("default", label:'${currentValue}')
         standardTile("configure", "device.configure", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
             state "configure", label:'', action:"configuration.configure", icon:"st.secondary.configure"
         }
-        standardTile("heatLevelUp", "device.heatLevelUp", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
-            state "heatLevelUp", label:'Heat', action:"heatLevelUp", icon:"st.thermostat.thermostat-up"
+        standardTile("raiseHeatingSetpoint", "device.raiseHeatingSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+            state "raiseHeatingSetpoint", label:'Heat', action:"raiseHeatingSetpoint", icon:"st.thermostat.thermostat-up"
         }
-        standardTile("heatLevelDown", "device.heatLevelDown", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
-            state "heatLevelDown", label:'Heat', action:"heatLevelDown", icon:"st.thermostat.thermostat-down"
+        standardTile("lowerHeatingSetpoint", "device.lowerHeatingSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+            state "lowerHeatingSetpoint", label:'Heat', action:"lowerHeatingSetpoint", icon:"st.thermostat.thermostat-down"
         }
-        standardTile("coolLevelUp", "device.coolLevelUp", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
-            state "coolLevelUp", label:'Cool', action:"coolLevelUp", icon:"st.thermostat.thermostat-up"
+        standardTile("raiseCoolSetpoint", "device.raiseCoolSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+            state "raiseCoolSetpoint", label:'Cool', action:"raiseCoolSetpoint", icon:"st.thermostat.thermostat-up"
         }
-        standardTile("coolLevelDown", "device.coolLevelDown", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
-            state "coolLevelDown", label:'Cool', action:"coolLevelDown", icon:"st.thermostat.thermostat-down"
+        standardTile("lowerCoolSetpoint", "device.lowerCoolSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+            state "lowerCoolSetpoint", label:'Cool', action:"lowerCoolSetpoint", icon:"st.thermostat.thermostat-down"
         }
         valueTile("battery", "device.battery", width: 2, height: 2, inactiveLabel: false) {
             state "battery", label:'\n ${currentValue}%', unit: "", icon: "http://smartthings.rboyapps.com/images/battery.png", backgroundColors:[
@@ -311,553 +269,270 @@ attributeState("default", label:'${currentValue}')
                 [value: 80, color: "#00dfff"]
             ]
         }
+        standardTile("blank", "device.image", width: 1, height: 1, canChangeIcon: false,  canChangeBackground: false, decoration: "flat") {
+        	state "blank", label: "", action: "", icon: "", backgroundColor: "#FFFFFF"
+        }
+        standardTile("blank2x", "device.image", width: 2, height: 2, canChangeIcon: false,  canChangeBackground: false, decoration: "flat") {
+        	state "blank", label: "", action: "", icon: "", backgroundColor: "#FFFFFF"
+        }
 
         main "summary"
-        details(["summary", "mode", "fanMode", "humidity", "heatingSetpoint", "heatLevelDown", "heatLevelUp", "heatSliderControl", "coolingSetpoint", "coolLevelDown", "coolLevelUp", "coolSliderControl", "refresh", "battery", "configure"])
+        details(["summary", "mode", "fanMode", "humidity", "heatingSetpoint", "lowerHeatingSetpoint", "raiseHeatingSetpoint", "heatSliderControl", "coolingSetpoint", "lowerCoolSetpoint", "raiseCoolSetpoint", "coolSliderControl", "blank2x", "refresh", "battery"])
     }
+}
+
+def installed() {
+    log.trace "Installed called"
+	// Configure device
+	def cmds = [new physicalgraph.device.HubAction(zwave.associationV1.associationSet(groupingIdentifier:1, nodeId:[zwaveHubNodeId]).format()),
+			new physicalgraph.device.HubAction(zwave.manufacturerSpecificV2.manufacturerSpecificGet().format())]
+	sendHubCommand(cmds)
+	runIn(3, "initialize", [overwrite: true])  // Allow configure command to be sent and acknowledged before proceeding
 }
 
 def updated() {
-    log.trace "Update called settings: $settings"
-    try {
-        if (!state.init) {
-            state.init = true
-        }
-        response(configure()) // Get the updates
-    } catch (e) {
-        log.warn "updated() threw $e"
-    }
+    log.trace "Updated called"
+	// If not set update ManufacturerSpecific data
+	if (!getDataValue("manufacturer")) {
+		sendHubCommand(new physicalgraph.device.HubAction(zwave.manufacturerSpecificV2.manufacturerSpecificGet().format()))
+		runIn(2, "initialize", [overwrite: true])  // Allow configure command to be sent and acknowledged before proceeding
+	} else {
+		initialize()
+	}
 }
 
-def parse(String description)
-{
-    def map = createEvent(zwaveEvent(zwave.parse(description, [0x42:1, 0x43:2, 0x31:3, 0x70:2])))
-    if (!map) {
-        return null
+def initialize() {
+	unschedule()
+	if (getDataValue("manufacturer") != "Honeywell") {
+		runEvery5Minutes("poll")  // This is not necessary for Honeywell Z-wave, but could be for other Z-wave thermostats
+	}
+	response(configure())
+}
+
+
+def parse(String description) {
+    def result = []
+	if (description == "updated") {
+	} else {
+		def zwcmd = zwave.parse(description, [0x42:1, 0x43:2, 0x31:3, 0x70:2])
+		if (zwcmd) {
+			result << zwaveEvent(zwcmd)
+            //log.debug "Parse returned $result"
+		} else {
+			log.debug "$device.displayName couldn't parse $description"
+		}
+	}
+
+    //def thermStatusS = "System ${device.currentValue('thermostatOperatingState')} | Fan ${device.currentValue('thermostatFanState')} | Battery ${device.currentValue('battery')}%"
+    def thermStatusS = "Fan ${device.currentValue('thermostatFanState') != "idle" ? "On" : "Idle"} | ${device.currentValue('battery')}%"
+    //log.trace thermStatusS
+    sendEvent(name: "thermStatus", value: thermStatusS, displayed: false) // Return the status
+
+    def fanStateS
+    if (device.currentValue('thermostatFanMode') == "auto") {
+        if (device.currentValue('thermostatFanState') != "idle") {
+            fanStateS = "autoOn"
+        } else {
+            fanStateS = "autoOff"
+        }
+    } else {
+        fanStateS = device.currentValue('thermostatFanMode')
     }
-
-    def result = [map]
-    if (map.isStateChange && map.name in ["heatingSetpoint","coolingSetpoint","thermostatMode"]) {
-        def map2 = [
-            name: "thermostatSetpoint",
-            unit: getTemperatureScale()
-        ]
-        if (map.name == "thermostatMode") {
-            state.lastTriedMode = map.value
-            if (map.value == "cool") {
-                map2.value = device.latestValue("coolingSetpoint")
-                log.info "THERMOSTAT, latest cooling setpoint = ${map2.value}"
-            }
-            else {
-                map2.value = device.latestValue("heatingSetpoint")
-                log.info "THERMOSTAT, latest heating setpoint = ${map2.value}"
-            }
-        }
-        else {
-            def mode = device.latestValue("thermostatMode")
-            log.info "THERMOSTAT, latest mode = ${mode}"
-            if ((map.name == "heatingSetpoint" && mode == "heat") || (map.name == "coolingSetpoint" && mode == "cool")) {
-                map2.value = map.value
-                map2.unit = map.unit
-            }
-        }
-        if (map2.value != null) {
-            log.debug "THERMOSTAT, adding setpoint event: $map"
-            result << createEvent(map2)
-        }
-    } else if (map.name == "thermostatFanMode" && map.isStateChange) {
-        state.lastTriedFanMode = map.value
-    }
-
-    def thermStatusS = "System ${device.currentState('thermostatOperatingState')?.value} | Fan ${device.currentState('thermostatFanState')?.value} | Battery ${device.currentState('battery')?.value}%"
-    sendEvent("name": "thermStatus", "value": thermStatusS, displayed: false, isStateChange: true)
-    log.trace thermStatusS
-
-    log.debug "Parse returned $result"
-    result
+    //log.trace "Fan state: $fanStateS"
+    sendEvent(name: "fanState", value: fanStateS)
+	
+    return result
 }
 
 // Event Generation
-def zwaveEvent(physicalgraph.zwave.commands.thermostatsetpointv2.ThermostatSetpointReport cmd)
-{
+def zwaveEvent(physicalgraph.zwave.commands.thermostatsetpointv2.ThermostatSetpointReport cmd) {
+    log.trace "$cmd"
+
     def cmdScale = cmd.scale == 1 ? "F" : "C"
-    def map = [:]
-    map.value = convertTemperatureIfNeeded(cmd.scaledValue, cmdScale, cmd.precision)
-    map.unit = getTemperatureScale()
-    map.displayed = true
-    switch (cmd.setpointType) {
-        case 1:
-        map.name = "heatingSetpoint"
-        break;
-        case 2:
-        map.name = "coolingSetpoint"
-        break;
-        default:
-            return [:]
-    }
-    // So we can respond with same format
-    state.size = cmd.size
-    state.scale = cmd.scale
-    state.precision = cmd.precision
-    map
+	def setpoint = getTempInLocalScale(cmd.scaledValue, cmdScale)
+	def unit = getTemperatureScale()
+	switch (cmd.setpointType) {
+		case 1:
+			sendEvent(name: "heatingSetpoint", value: setpoint, unit: unit, displayed: false)
+			updateThermostatSetpoint("heatingSetpoint", setpoint)
+			break;
+		case 2:
+			sendEvent(name: "coolingSetpoint", value: setpoint, unit: unit, displayed: false)
+			updateThermostatSetpoint("coolingSetpoint", setpoint)
+			break;
+		default:
+			log.debug "unknown setpointType $cmd.setpointType"
+			return
+	}
+	// So we can respond with same format
+	state.size = cmd.size
+	state.scale = cmd.scale
+	state.precision = cmd.precision
+	// Make sure return value is not result from above expresion
+	return 0
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.sensormultilevelv3.SensorMultilevelReport cmd)
-{
-    def map = [:]
-    map.displayed = true
-    map.isStateChange = true
-    if (cmd.sensorType == 1) {
-        map.value = convertTemperatureIfNeeded(cmd.scaledSensorValue, cmd.scale == 1 ? "F" : "C", cmd.precision)
-        map.unit = getTemperatureScale()
-        map.name = "temperature"
-    } else if (cmd.sensorType == 5) {
-        map.value = cmd.scaledSensorValue
-        map.unit = "%"
-        map.name = "humidity"
-    }
-    map
+def zwaveEvent(physicalgraph.zwave.commands.sensormultilevelv3.SensorMultilevelReport cmd) {
+    log.trace "$cmd"
+
+	def map = [:]
+	if (cmd.sensorType == 1) {
+        map.value = convertTemperatureIfNeeded(cmd.scaledSensorValue?.toBigDecimal(), cmd.scale == 1 ? "F" : "C")?.toDouble()?.round(cmd.precision ? 1 : 0) // Keep upto one decimal point for compatibility with newer thermostats with improved precision reporting
+		map.unit = getTemperatureScale()
+		map.name = "temperature"
+		updateThermostatSetpoint(null, null)
+	} else if (cmd.sensorType == 5) {
+		map.value = cmd.scaledSensorValue
+		map.unit = "%"
+		map.name = "humidity"
+	}
+	sendEvent(map)
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport cmd)
-{
-    def map = [:]
-    switch (cmd.operatingState) {
-        case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_IDLE:
-        map.value = "idle"
-        break
-        case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_HEATING:
-        map.value = "heating"
-        break
-        case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_COOLING:
-        map.value = "cooling"
-        break
-        case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_FAN_ONLY:
-        map.value = "fan only"
-        break
-        case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_PENDING_HEAT:
-        map.value = "pending heat"
-        break
-        case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_PENDING_COOL:
-        map.value = "pending cool"
-        break
-        case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_VENT_ECONOMIZER:
-        map.value = "vent economizer"
-        break
-    }
-    map.name = "thermostatOperatingState"
-    map.displayed = true
-    map.isStateChange = true
-    map
+def zwaveEvent(physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport cmd) {
+    log.trace "$cmd"
+
+	def map = [name: "thermostatOperatingState"]
+	switch (cmd.operatingState) {
+		case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_IDLE:
+			map.value = "idle"
+			break
+		case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_HEATING:
+			map.value = "heating"
+			break
+		case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_COOLING:
+			map.value = "cooling"
+			break
+		case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_FAN_ONLY:
+			map.value = "fan only"
+			break
+		case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_PENDING_HEAT:
+			map.value = "pending heat"
+			break
+		case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_PENDING_COOL:
+			map.value = "pending cool"
+			break
+		case physicalgraph.zwave.commands.thermostatoperatingstatev1.ThermostatOperatingStateReport.OPERATING_STATE_VENT_ECONOMIZER:
+			map.value = "vent economizer"
+			break
+	}
+	// Makes sure we have the correct thermostat mode
+	sendHubCommand(new physicalgraph.device.HubAction(zwave.thermostatModeV2.thermostatModeGet().format()))
+	sendEvent(map)
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.thermostatfanstatev1.ThermostatFanStateReport cmd) {
-    def map = [name: "thermostatFanState"]
-    switch (cmd.fanOperatingState) {
-        case 0:
-        map.value = "idle"
-        break
-        case 1:
-        map.value = "running"
-        break
-        case 2:
-        map.value = "running high"
-        break
-    }
-    map.displayed = true
-    map.isStateChange = true
-    map
+    log.trace "$cmd"
+
+	def map = [name: "thermostatFanState", unit: ""]
+	switch (cmd.fanOperatingState) {
+		case 0:
+			map.value = "idle"
+			break
+		case 1:
+			map.value = "running"
+			break
+		case 2:
+			map.value = "running high"
+			break
+	}
+	sendEvent(map)
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport cmd) {
-    def map = [:]
-    switch (cmd.mode) {
-        case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_OFF:
-        map.value = "off"
-        break
-        case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_HEAT:
-        map.value = "heat"
-        break
-        case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_AUXILIARY_HEAT:
-        map.value = "emergencyHeat"
-        break
-        case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_COOL:
-        map.value = "cool"
-        break
-        case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_AUTO:
-        map.value = "auto"
-        break
-    }
-    map.name = "thermostatMode"
-    map.displayed = true
-    map
+    log.trace "$cmd"
+
+	def map = [name: "thermostatMode", data:[supportedThermostatModes: state.supportedModes]]
+	switch (cmd.mode) {
+		case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_OFF:
+			map.value = "off"
+			break
+		case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_HEAT:
+			map.value = "heat"
+			break
+		case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_AUXILIARY_HEAT:
+			map.value = "emergency heat"
+			break
+		case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_COOL:
+			map.value = "cool"
+			break
+		case physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeReport.MODE_AUTO:
+			map.value = "auto"
+			break
+	}
+	sendEvent(map)
+	updateThermostatSetpoint(null, null)
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeReport cmd) {
-    def map = [:]
-    switch (cmd.fanMode) {
-        case physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeReport.FAN_MODE_AUTO_LOW:
-        map.value = "fanAuto"
-        break
-        case physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeReport.FAN_MODE_LOW:
-        map.value = "fanOn"
-        break
-        case physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeReport.FAN_MODE_CIRCULATION:
-        map.value = "fanCirculate"
-        break
-    }
-    map.name = "thermostatFanMode"
-    map.displayed = true
-    map
+    log.trace "$cmd"
+
+	def map = [name: "thermostatFanMode", data:[supportedThermostatFanModes: state.supportedFanModes]]
+	switch (cmd.fanMode) {
+		case physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeReport.FAN_MODE_AUTO_LOW:
+			map.value = "auto"
+			break
+		case physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeReport.FAN_MODE_LOW:
+			map.value = "on"
+			break
+		case physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeReport.FAN_MODE_CIRCULATION:
+			map.value = "circulate"
+			break
+	}
+	sendEvent(map)
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeSupportedReport cmd) {
-    log.trace "ThermostatModeSupportedReport: $cmd"
+    log.trace "$cmd"
 
-    def supportedModes = ""
-    if(cmd.off) { supportedModes += "off " }
-    if(cmd.heat) { supportedModes += "heat " }
-    if(cmd.auxiliaryemergencyHeat) { supportedModes += "emergencyHeat " }
-    if(cmd.cool) { supportedModes += "cool " }
-    if(cmd.auto) { supportedModes += "auto " }
+	def supportedModes = []
+	if(cmd.off) { supportedModes << "off" }
+	if(cmd.heat) { supportedModes << "heat" }
+	if(cmd.cool) { supportedModes << "cool" }
+	if(cmd.auto) { supportedModes << "auto" }
+	if(cmd.auxiliaryemergencyHeat) { supportedModes << "emergency heat" }
 
-    log.trace "SuppportedModes: $supportedModes"
-
-    state.supportedModes = supportedModes
-    null // return null as there's nothing to process
+	state.supportedModes = supportedModes
+	sendEvent(name: "supportedThermostatModes", value: supportedModes, displayed: false)
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.thermostatfanmodev3.ThermostatFanModeSupportedReport cmd) {
-    log.trace "ThermostatFanModeSupportedReport: $cmd"
+    log.trace "$cmd"
 
-    def supportedFanModes = ""
-    if(cmd.auto) { supportedFanModes += "fanAuto " }
-    if(cmd.low) { supportedFanModes += "fanOn " }
-    if(cmd.circulation) { supportedFanModes += "fanCirculate " }
+	def supportedFanModes = []
+	if(cmd.auto) { supportedFanModes << "auto" }
+	if(cmd.circulation) { supportedFanModes << "circulate" }
+	if(cmd.low) { supportedFanModes << "on" }
 
-    log.trace "SuppportedFanModes: $supportedFanModes"
+	state.supportedFanModes = supportedFanModes
+	sendEvent(name: "supportedThermostatFanModes", value: supportedFanModes, displayed: false)
+}
 
-    state.supportedFanModes = supportedFanModes
-    null // return null as there's nothing to process
+def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerSpecificReport cmd) {
+    log.trace "$cmd"
+
+	if (cmd.manufacturerName) {
+		updateDataValue("manufacturer", cmd.manufacturerName)
+	}
+	if (cmd.productTypeId) {
+		updateDataValue("productTypeId", cmd.productTypeId.toString())
+	}
+	if (cmd.productId) {
+		updateDataValue("productId", cmd.productId.toString())
+	}
+    
+    def msr = String.format("%04X-%04X-%04X", cmd.manufacturerId, cmd.productTypeId, cmd.productId)
+    log.debug "msr: $msr"
+    updateDataValue("MSR", msr)
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
-    log.debug "Zwave event received: $cmd"
-}
-
-def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionReport cmd) {
-    log.debug "$cmd"
-	def fw = "${cmd.applicationVersion}.${cmd.applicationSubVersion}"
-	updateDataValue("fw", fw)
-	def text = "$device.displayName: firmware version: $fw, Z-Wave version: ${cmd.zWaveProtocolVersion}.${cmd.zWaveProtocolSubVersion}"
-	def result = createEvent(descriptionText: text, isStateChange: false)
-    
-    if (state.MSR?.startsWith("0098-") && (cmd.applicationVersion <= 8)) {
-        text = "Found CT-XXX thermostat model with defective v${cmd.applicationVersion} firmware. Clock functionality may be impaired"
-        state.defectiveClock = true
-        log.warn text
-        result = createEvent(descriptionText: text, displayed: true)
-    } else {
-        state.defectiveClock = false // Reset incase the user upgraded the Z-Wave module
-    }
-    
-    result
-}
-def zwaveEvent(physicalgraph.zwave.Command cmd) {
-    log.warn "Unexpected zwave command $cmd"
-}
-
-// Command Implementations
-def poll() {
-    sendEvent([name: "codeVersion", value: clientVersion()]) // Save client version for parent app
-    sendEvent([name: "dhName", value: "Z-Wave Thermostat with Temperature, Humidity and Auto Time Setting Device Handler"]) // Save DH Name for parent app
-
-    def doPoll = false
-
-    if (batterySaveMode) { // If we are in battery power save mode then we poll once it 30 minutes only
-        log.debug "Battery save mode, fetching updates every 30 minutes"
-        def nowTime = new Date().time
-        def ageInMinutes = state.lastPollGet ? (nowTime - state.lastPollGet)/60000 : 30
-        log.debug "Last poll ${ageInMinutes} minutes ago"
-        if (ageInMinutes >= 30) {
-            state.lastPollGet = nowTime
-            log.info "Fetching fresh thermostate state"
-            doPoll = true
-        }
-    } else {
-        doPoll = true // no battery save, lets get the values
-    }
-
-    if (doPoll) {
-        log.trace "Polling thermostat information"
-        delayBetween([
-            zwave.sensorMultilevelV3.sensorMultilevelGet().format(), // current temperature
-            zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1).format(),
-            zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 2).format(),
-            zwave.thermostatModeV2.thermostatModeGet().format(),
-            zwave.thermostatFanModeV3.thermostatFanModeGet().format(),
-            zwave.thermostatFanStateV1.thermostatFanStateGet().format(),
-            zwave.thermostatOperatingStateV1.thermostatOperatingStateGet().format(),
-            getBattery(),
-            setClock(),
-            zwave.multiInstanceV1.multiInstanceCmdEncap(instance: 2).encapsulate(zwave.sensorMultilevelV3.sensorMultilevelGet()).format() // CT-100/101 Customization - Humidity is an encapsulated multilevel sensor get command, 2nd instance
-        ], 2300)
-    }
-    else {
-        log.trace "Poll called again to soon, skipping poll to save battery"
-        sendEvent(name: "battery", value: device.currentValue("battery"), unit: "%", descriptionText: "Battery save mode", displayed: false, isStateChange: true) // We need to send something otherwise Poll dies if nothing is done
-        device.activity()  // workaround to keep polling from being shut off
-        null
-    }
-}
-
-def quickSetHeat(degrees) {
-    setHeatingSetpoint(degrees, 1000)
-}
-
-def setHeatingSetpoint(degrees, delay = 30000) {
-    setHeatingSetpoint(degrees.toDouble(), delay)
-}
-
-def setHeatingSetpoint(Double degrees, Integer delay = 30000) {
-    log.trace "setHeatingSetpoint($degrees, $delay)"
-    def deviceScale = state.scale ?: 1
-    def deviceScaleString = deviceScale == 2 ? "C" : "F"
-    def locationScale = getTemperatureScale()
-    def p = (state.precision == null) ? 1 : state.precision
-
-    def convertedDegrees
-    if (locationScale == "C" && deviceScaleString == "F") {
-        convertedDegrees = celsiusToFahrenheit(degrees)
-    } else if (locationScale == "F" && deviceScaleString == "C") {
-        convertedDegrees = fahrenheitToCelsius(degrees)
-    } else {
-        convertedDegrees = degrees
-    }
-
-    delayBetween([
-        zwave.thermostatSetpointV1.thermostatSetpointSet(setpointType: 1, scale: deviceScale, precision: p, scaledValue: convertedDegrees).format(),
-        zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1).format()
-    ], delay)
-}
-
-def quickSetCool(degrees) {
-    setCoolingSetpoint(degrees, 1000)
-}
-
-def setCoolingSetpoint(degrees, delay = 30000) {
-    setCoolingSetpoint(degrees.toDouble(), delay)
-}
-
-def setCoolingSetpoint(Double degrees, Integer delay = 30000) {
-    log.trace "setCoolingSetpoint($degrees, $delay)"
-    def deviceScale = state.scale ?: 1
-    def deviceScaleString = deviceScale == 2 ? "C" : "F"
-    def locationScale = getTemperatureScale()
-    def p = (state.precision == null) ? 1 : state.precision
-
-    def convertedDegrees
-    if (locationScale == "C" && deviceScaleString == "F") {
-        convertedDegrees = celsiusToFahrenheit(degrees)
-    } else if (locationScale == "F" && deviceScaleString == "C") {
-        convertedDegrees = fahrenheitToCelsius(degrees)
-    } else {
-        convertedDegrees = degrees
-    }
-
-    delayBetween([
-        zwave.thermostatSetpointV1.thermostatSetpointSet(setpointType: 2, scale: deviceScale, precision: p,  scaledValue: convertedDegrees).format(),
-        zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 2).format()
-    ], delay)
-}
-
-def configure() {
-    log.debug "Configure called"
-
-    // Identify and configure the thermostat
-    if (!state.MSR) { // If we don't have a MSR, first get it (and wait for it to complete)
-        log.debug "Getting Device MSR"
-        delayBetween([
-            zwave.thermostatModeV2.thermostatModeSupportedGet().format(),
-            zwave.thermostatFanModeV3.thermostatFanModeSupportedGet().format(),
-            zwave.associationV1.associationSet(groupingIdentifier:1, nodeId:[zwaveHubNodeId]).format(),
-            zwave.manufacturerSpecificV2.manufacturerSpecificGet().format(),
-            zwave.versionV1.versionGet().format()
-        ], 2300)
-    } else {
-        log.trace "Device MSR: $state.MSR"
-        checkThermostatModel()
-        delayBetween([
-            //discoverConfigParameters(), // DEBUGGING
-            zwave.versionV1.versionGet().format(),
-            zwave.thermostatModeV2.thermostatModeSupportedGet().format(),
-            zwave.thermostatFanModeV3.thermostatFanModeSupportedGet().format(),
-            zwave.associationV1.associationSet(groupingIdentifier:1, nodeId:[zwaveHubNodeId]).format(),
-            setConfigParameters()
-        ], 2300)
-    }
-}
-
-def modes() {
-    ["off", "heat", "cool", "auto", "emergencyHeat"]
-}
-
-def switchMode() {
-    def currentMode = device.currentState("thermostatMode")?.value
-    def lastTriedMode = state.lastTriedMode ?: currentMode ?: "off"
-    def supportedModes = getDataByName("supportedModes")
-    def modeOrder = modes()
-    def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
-    def nextMode = next(lastTriedMode)
-    if (supportedModes?.contains(currentMode)) {
-        while (!supportedModes.contains(nextMode) && nextMode != "off") {
-            nextMode = next(nextMode)
-        }
-    }
-    state.lastTriedMode = nextMode
-    delayBetween([
-        zwave.thermostatModeV2.thermostatModeSet(mode: modeMap[nextMode]).format(),
-        zwave.thermostatModeV2.thermostatModeGet().format()
-    ], 1000)
-}
-
-def switchToMode(nextMode) {
-    def supportedModes = getDataByName("supportedModes")
-    if(supportedModes && !supportedModes.contains(nextMode)) log.warn "thermostat mode '$nextMode' is not supported"
-    if (nextMode in modes()) {
-        state.lastTriedMode = nextMode
-        "$nextMode"()
-    } else {
-        log.debug("no mode method '$nextMode'")
-    }
-}
-
-def switchFanMode() {
-    def currentMode = device.currentState("thermostatFanMode")?.value
-    def lastTriedMode = state.lastTriedFanMode ?: currentMode ?: "off"
-    def supportedModes = getDataByName("supportedFanModes") ?: "fanAuto fanOn"
-    def modeOrder = ["fanAuto", "fanCirculate", "fanOn"]
-    def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
-    def nextMode = next(lastTriedMode)
-    while (!supportedModes?.contains(nextMode) && nextMode != "fanAuto") {
-        nextMode = next(nextMode)
-    }
-    switchToFanMode(nextMode)
-}
-
-def switchToFanMode(nextMode) {
-    def supportedFanModes = getDataByName("supportedFanModes")
-    if(supportedFanModes && !supportedFanModes.contains(nextMode)) log.warn "thermostat mode '$nextMode' is not supported"
-
-    def returnCommand
-    if (nextMode == "fanAuto") {
-        returnCommand = fanAuto()
-    } else if (nextMode == "fanOn") {
-        returnCommand = fanOn()
-    } else if (nextMode == "fanCirculate") {
-        returnCommand = fanCirculate()
-    } else {
-        log.debug("no fan mode '$nextMode'")
-    }
-    if(returnCommand) state.lastTriedFanMode = nextMode
-    returnCommand
-}
-
-def getDataByName(String name) {
-    state[name] ?: device.getDataValue(name)
-}
-
-def getModeMap() { [
-    "off": 0,
-    "heat": 1,
-    "cool": 2,
-    "auto": 3,
-    "emergencyHeat": 4
-]}
-
-def setThermostatMode(String value) {
-    delayBetween([
-        zwave.thermostatModeV2.thermostatModeSet(mode: modeMap[value]).format(),
-        zwave.thermostatModeV2.thermostatModeGet().format()
-    ], standardDelay)
-}
-
-def getFanModeMap() { [
-    "auto": 0,
-    "on": 1,
-    "circulate": 6
-]}
-
-def setThermostatFanMode(String value) {
-    delayBetween([
-        zwave.thermostatFanModeV3.thermostatFanModeSet(fanMode: fanModeMap[value]).format(),
-        zwave.thermostatFanModeV3.thermostatFanModeGet().format()
-    ], standardDelay)
-}
-
-def off() {
-    delayBetween([
-        zwave.thermostatModeV2.thermostatModeSet(mode: 0).format(),
-        zwave.thermostatModeV2.thermostatModeGet().format()
-    ], standardDelay)
-}
-
-def heat() {
-    delayBetween([
-        zwave.thermostatModeV2.thermostatModeSet(mode: 1).format(),
-        zwave.thermostatModeV2.thermostatModeGet().format()
-    ], standardDelay)
-}
-
-def emergencyHeat() {
-    delayBetween([
-        zwave.thermostatModeV2.thermostatModeSet(mode: 4).format(),
-        zwave.thermostatModeV2.thermostatModeGet().format()
-    ], standardDelay)
-}
-
-def cool() {
-    delayBetween([
-        zwave.thermostatModeV2.thermostatModeSet(mode: 2).format(),
-        zwave.thermostatModeV2.thermostatModeGet().format()
-    ], standardDelay)
-}
-
-def auto() {
-    delayBetween([
-        zwave.thermostatModeV2.thermostatModeSet(mode: 3).format(),
-        zwave.thermostatModeV2.thermostatModeGet().format()
-    ], standardDelay)
-}
-
-def fanOn() {
-    delayBetween([
-        zwave.thermostatFanModeV3.thermostatFanModeSet(fanMode: 1).format(),
-        zwave.thermostatFanModeV3.thermostatFanModeGet().format()
-    ], standardDelay)
-}
-
-def fanAuto() {
-    delayBetween([
-        zwave.thermostatFanModeV3.thermostatFanModeSet(fanMode: 0).format(),
-        zwave.thermostatFanModeV3.thermostatFanModeGet().format()
-    ], standardDelay)
-}
-
-def fanCirculate() {
-    delayBetween([
-        zwave.thermostatFanModeV3.thermostatFanModeSet(fanMode: 6).format(),
-        zwave.thermostatFanModeV3.thermostatFanModeGet().format()
-    ], standardDelay)
-}
-
-private getStandardDelay() {
-    1000
+	log.debug "Zwave BasicReport: $cmd"
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiInstanceCmdEncap cmd) {
     def encapsulatedCommand = cmd?.encapsulatedCommand([0x31: 3]) // Encapsulate Sensor Multi Level (0x31) and use Version 3 of the class
-    log.debug ("multichannelv3.MultiInstanceCmdEncap: command from instance ${cmd?.instance}: ${encapsulatedCommand}")
+    log.trace ("multichannelv3.MultiInstanceCmdEncap: command from instance ${cmd?.instance}: ${encapsulatedCommand}")
     if (encapsulatedCommand) {
         return zwaveEvent(encapsulatedCommand)
     } else {
@@ -866,33 +541,41 @@ def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiInstanceCmdEncap
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.batteryv1.BatteryReport cmd) {
+    log.trace "$cmd"
+
     def map = [ name: "battery", unit: "%" ]
-    map.isStateChange = true
-    map.displayed = true
-    log.debug "Battery level $cmd.batteryLevel%"
     if (cmd.batteryLevel == 0xFF || cmd.batteryLevel == 0) {
         map.value = 1
         map.descriptionText = "battery is low!"
     } else {
         map.value = cmd.batteryLevel
     }
-    map
+    sendEvent(map)
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerSpecificReport cmd) {
-    log.debug "ManufacturerSpecificReport $cmd"
+def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionReport cmd) {
+    log.trace "$cmd"
+
     def result = []
-
-    def msr = String.format("%04X-%04X-%04X", cmd.manufacturerId, cmd.productTypeId, cmd.productId)
-    log.debug "msr: $msr"
-    updateDataValue("MSR", msr)
-
-    result << createEvent(descriptionText: "$device.displayName MSR: $msr", isStateChange: false)
+	def fw = "${cmd.applicationVersion}.${cmd.applicationSubVersion}"
+	updateDataValue("fw", fw)
+	def text = "$device.displayName: firmware version: $fw, Z-Wave version: ${cmd.zWaveProtocolVersion}.${cmd.zWaveProtocolSubVersion}"
+	result << createEvent(descriptionText: text, isStateChange: false)
+    
+    if (state.MSR?.startsWith("0098-") && (cmd.applicationVersion <= 8)) {
+        text = "Found CT-XXX thermostat model with defective v${cmd.applicationVersion} firmware. Clock functionality may be impaired"
+        state.defectiveClock = true
+        log.warn text
+        result << createEvent(descriptionText: text, displayed: true)
+    } else {
+        state.defectiveClock = false // Reset incase the user upgraded the Z-Wave module
+    }
+    
     result
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
-    log.trace "ConfigurationReport: $cmd"
+    log.trace "$cmd"
 
     switch (state.MSR) {
         case "5254-0200-8031": // ZTS-110
@@ -938,40 +621,526 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport 
             break
     }
 
-    null // Just info, nothing to do
+    [] // Just info, nothing to do
+}
+
+def zwaveEvent(physicalgraph.zwave.Command cmd) {
+    log.warn "Unexpected zwave command $cmd"
+}
+
+// Command Implementations
+def configure() {
+    log.trace "Configure called"
+
+    // Identify and configure the thermostat
+    log.trace "Device MSR: $state.MSR"
+    checkThermostatModel()
+    runIn(30, refresh) // Give it some time and then run refresh
+    delayBetween([
+        //discoverConfigParameters(), // DEBUGGING
+        zwave.manufacturerSpecificV2.manufacturerSpecificGet().format(),
+        zwave.versionV1.versionGet().format(),
+        setConfigParameters()
+    ], 2300)
+}
+
+def refresh() {
+    // Force a refresh
+    log.info "Requested a refresh"
+    state.lastBatteryGet = (new Date().time) - (1440 * 60000)
+    state.lastClockSet = (new Date().time) - (1440 * 60000)
+    state.lastPollGet = (new Date().time) - (30 * 60000)
+
+    // Identify and configure the thermostat
+    if (!state.MSR) { // If we don't have a MSR, first get it (and wait for it to complete)
+        log.debug "Getting Device MSR"
+        delayBetween([
+            zwave.manufacturerSpecificV2.manufacturerSpecificGet().format(),
+            zwave.versionV1.versionGet().format(),
+            poll()
+        ], 2000)
+    } else {
+        checkThermostatModel()
+        log.trace "Device MSR: $state.MSR"
+        delayBetween([
+            poll()
+        ], 2000)
+    }
+
+    // NOTHING AFTER THIS AS THE ZWAVE NEEDS TO BE RETURNED TO BE EXECUTED
+}
+
+def poll() {
+    sendEvent([name: "codeVersion", value: clientVersion()]) // Save client version for parent app
+    sendEvent([name: "dhName", value: "Z-Wave Thermostat with Temperature, Humidity and Auto Time Setting Device Handler"]) // Save DH Name for parent app
+
+    def doPoll = false
+
+    if (batterySaveMode) { // If we are in battery power save mode then we poll once it 30 minutes only
+        log.debug "Battery save mode, fetching updates every 30 minutes"
+        def nowTime = new Date().time
+        def ageInMinutes = state.lastPollGet ? (nowTime - state.lastPollGet)/60000 : 30
+        log.debug "Last poll ${ageInMinutes} minutes ago"
+        if (ageInMinutes >= 30) {
+            state.lastPollGet = nowTime
+            log.info "Fetching fresh thermostate state"
+            doPoll = true
+        }
+    } else {
+        doPoll = true // no battery save, lets get the values
+    }
+
+    if (doPoll) {
+        log.trace "Polling thermostat information"
+        delayBetween([
+            zwave.thermostatModeV2.thermostatModeSupportedGet().format(),
+            zwave.thermostatFanModeV3.thermostatFanModeSupportedGet().format(),
+            zwave.thermostatModeV2.thermostatModeGet().format(),
+            zwave.thermostatFanModeV3.thermostatFanModeGet().format(),
+            zwave.thermostatFanStateV1.thermostatFanStateGet().format(),
+            zwave.sensorMultilevelV3.sensorMultilevelGet().format(), // current temperature
+            zwave.thermostatOperatingStateV1.thermostatOperatingStateGet().format(),
+            zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1).format(),
+            zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 2).format(),
+            zwave.multiInstanceV1.multiInstanceCmdEncap(instance: 2).encapsulate(zwave.sensorMultilevelV3.sensorMultilevelGet()).format(), // CT-100/101 Customization - Humidity is an encapsulated multilevel sensor get command, 2nd instance
+            getBattery(),
+            setClock()
+        ], 2300)
+    }
+    else {
+        log.trace "Poll called again to soon, skipping poll to save battery"
+        sendEvent(name: "battery", value: device.currentValue("battery"), unit: "%", descriptionText: "Battery save mode", displayed: false, isStateChange: true) // We need to send something otherwise Poll dies if nothing is done
+    }
+}
+
+def levelUp() {
+    log.trace "Level Up called"
+    levelUpDown(1)
+}
+
+def levelDown() {
+    log.trace "Level Down called"
+    levelUpDown(-1)
+}
+
+def levelUpDown(value) {
+    log.trace "levelUpDown called with value $value, current thermostat mode ${device.currentState("thermostatMode")?.value}"
+
+    // NOTE: Bug in ST platform, for iOS devices we only get 0 (down) and 1 (up) for this control
+    // For Android devices we get an absolute number showing the number of times up/down have been called since the page was opened (e.g. called up 4 times we get +4, if down then we get +3). If you open the page again and press up you get +1, if you close and open again and press down you get -1 (and the as long as the page is open it will be cumulative)
+
+    // Determine which OS based on value behaviors (urrgghhh.....ST!)
+    def upLevel
+    if (!state.lastLevelUpDown)
+    state.lastLevelUpDown = 0 // If it isn't defined lets baseline it
+
+    if ((state.lastLevelUpDown == 1) && (value == 1)) // Last time it was 1 and again it's 1 its increase
+    upLevel = true
+    else if ((state.lastLevelUpDown == 0) && (value == 0)) // Last time it was 0 and again it's 0 then it's decrease
+        upLevel = false
+    else if ((state.lastLevelUpDown == -1) && (value == -1)) // Last time it was -1 and again it's -1 then it's decrease
+        upLevel = false
+    else if ((value - state.lastLevelUpDown) > 0) // If it's increasing then it's up
+        upLevel = true
+    else if ((value - state.lastLevelUpDown) < 0) // If it's decreasing then it's down
+        upLevel = false
+    else
+        log.error "UNDEFINED STATE, CONTACT DEVELOPER. Last level $state.lastLevelUpDown, Current level, $value"
+
+    state.lastLevelUpDown = value // Save it
+
+    if (upLevel) { // Increase the current temperature (check heating or cooling mode)
+        log.debug "Increasing temperature by 1°"
+        if (device.currentState("thermostatMode")?.value.contains("auto")) { // Auto we dont' know current mode, so change heat and cool
+            delayBetween([raiseHeatingSetpoint(), raiseCoolSetpoint()], 5000)
+        } else if (device.currentState("thermostatMode")?.value.contains("heat")) {
+            raiseHeatingSetpoint()
+        } else if (device.currentState("thermostatMode")?.value.contains("cool")) {
+            raiseCoolSetpoint()
+        }
+    } else {
+        log.debug "Reducing temperature by 1°"
+        if (device.currentState("thermostatMode")?.value.contains("auto")) { // Auto we dont' know current mode, so change heat and cool
+            delayBetween([lowerHeatingSetpoint(), lowerCoolSetpoint()], 5000)
+        } else if (device.currentState("thermostatMode")?.value.contains("heat")) {
+            lowerHeatingSetpoint()
+        } else if (device.currentState("thermostatMode")?.value.contains("cool")) {
+            lowerCoolSetpoint()
+        }
+    }
+
+    // NOTHING AFTER THE COMMANDS OR THE COMMANDS WONT WORK
+}
+
+def raiseHeatingSetpoint() {
+    log.debug "Setting heat set point up"
+	alterSetpoint(true, "heatingSetpoint")
+}
+
+def lowerHeatingSetpoint() {
+    log.debug "Setting heat set point down"
+	alterSetpoint(false, "heatingSetpoint")
+}
+
+def raiseCoolSetpoint() {
+    log.debug "Setting cool set point up"
+	alterSetpoint(true, "coolingSetpoint")
+}
+
+def lowerCoolSetpoint() {
+    log.debug "Setting cool set point down"
+	alterSetpoint(false, "coolingSetpoint")
+}
+
+// Adjusts nextHeatingSetpoint either .5° C/1° F) if raise true/false
+def alterSetpoint(raise, setpoint) {
+	def locationScale = getTemperatureScale()
+	def deviceScale = (state.scale == 1) ? "F" : "C"
+	def heatingSetpoint = getTempInLocalScale("heatingSetpoint")
+	def coolingSetpoint = getTempInLocalScale("coolingSetpoint")
+	def targetValue = (setpoint == "heatingSetpoint") ? heatingSetpoint : coolingSetpoint
+	def delta = (locationScale == "F") ? 1 : 0.5
+	targetValue += raise ? delta : - delta
+
+	def data = enforceSetpointLimits(setpoint, [targetValue: targetValue, heatingSetpoint: heatingSetpoint, coolingSetpoint: coolingSetpoint])
+	// update UI without waiting for the device to respond, this to give user a smoother UI experience
+	// also, as runIn's have to overwrite and user can change heating/cooling setpoint separately separate runIn's have to be used
+	if (data.targetHeatingSetpoint) {
+		sendEvent("name": "heatingSetpoint", "value": getTempInLocalScale(data.targetHeatingSetpoint, deviceScale),
+				unit: getTemperatureScale(), eventType: "ENTITY_UPDATE", displayed: false)
+	}
+	if (data.targetCoolingSetpoint) {
+		sendEvent("name": "coolingSetpoint", "value": getTempInLocalScale(data.targetCoolingSetpoint, deviceScale),
+				unit: getTemperatureScale(), eventType: "ENTITY_UPDATE", displayed: false)
+	}
+	if (data.targetHeatingSetpoint && data.targetCoolingSetpoint) {
+		runIn(5, "updateHeatingSetpoint", [data: data, overwrite: true])
+	} else if (setpoint == "heatingSetpoint" && data.targetHeatingSetpoint) {
+		runIn(5, "updateHeatingSetpoint", [data: data, overwrite: true])
+	} else if (setpoint == "coolingSetpoint" && data.targetCoolingSetpoint) {
+		runIn(5, "updateCoolingSetpoint", [data: data, overwrite: true])
+	}
+}
+
+def updateHeatingSetpoint(data) {
+	updateSetpoints(data)
+}
+
+def updateCoolingSetpoint(data) {
+	updateSetpoints(data)
+}
+
+def enforceSetpointLimits(setpoint, data) {
+	def locationScale = getTemperatureScale() 
+	def minSetpoint = (setpoint == "heatingSetpoint") ? getTempInDeviceScale(40, "F") : getTempInDeviceScale(50, "F")
+	def maxSetpoint = (setpoint == "heatingSetpoint") ? getTempInDeviceScale(90, "F") : getTempInDeviceScale(99, "F")
+	def deadband = (state.scale == 1) ? 3 : 2  // 3°F, 2°C
+	def targetValue = getTempInDeviceScale(data.targetValue, locationScale)
+	def heatingSetpoint = null
+	def coolingSetpoint = null
+	// Enforce min/mix for setpoints
+	if (targetValue > maxSetpoint) {
+		targetValue = maxSetpoint
+	} else if (targetValue < minSetpoint) {
+		targetValue = minSetpoint
+	}
+	// Enforce 3 degrees F deadband between setpoints
+	if (setpoint == "heatingSetpoint") {
+		heatingSetpoint = targetValue 
+		coolingSetpoint = (heatingSetpoint + deadband > getTempInDeviceScale(data.coolingSetpoint, locationScale)) ? heatingSetpoint + deadband : null
+	}
+	if (setpoint == "coolingSetpoint") {
+		coolingSetpoint = targetValue
+		heatingSetpoint = (coolingSetpoint - deadband < getTempInDeviceScale(data.heatingSetpoint, locationScale)) ? coolingSetpoint - deadband : null
+	}
+	return [targetHeatingSetpoint: heatingSetpoint, targetCoolingSetpoint: coolingSetpoint]
+}
+
+def setHeatingSetpoint(degrees) {
+	if (degrees) {
+		state.heatingSetpoint = degrees.toDouble()
+		runIn(2, "updateSetpoints", [overwrite: true])
+	}
+}
+
+def setCoolingSetpoint(degrees) {
+	if (degrees) {
+		state.coolingSetpoint = degrees.toDouble()
+		runIn(2, "updateSetpoints", [overwrite: true])
+	}
+}
+
+def updateSetpoints() {
+	def deviceScale = (state.scale == 1) ? "F" : "C"
+	def data = [targetHeatingSetpoint: null, targetCoolingSetpoint: null]
+	def heatingSetpoint = getTempInLocalScale("heatingSetpoint")
+	def coolingSetpoint = getTempInLocalScale("coolingSetpoint")
+	if (state.heatingSetpoint) {
+		data = enforceSetpointLimits("heatingSetpoint", [targetValue: state.heatingSetpoint,
+				heatingSetpoint: heatingSetpoint, coolingSetpoint: coolingSetpoint])
+	}
+	if (state.coolingSetpoint) {
+		heatingSetpoint = data.targetHeatingSetpoint ? getTempInLocalScale(data.targetHeatingSetpoint, deviceScale) : heatingSetpoint
+		coolingSetpoint = data.targetCoolingSetpoint ? getTempInLocalScale(data.targetCoolingSetpoint, deviceScale) : coolingSetpoint
+		data = enforceSetpointLimits("coolingSetpoint", [targetValue: state.coolingSetpoint,
+				heatingSetpoint: heatingSetpoint, coolingSetpoint: coolingSetpoint])
+		data.targetHeatingSetpoint = data.targetHeatingSetpoint ?: heatingSetpoint
+	}
+	state.heatingSetpoint = null
+	state.coolingSetpoint = null
+	updateSetpoints(data)
+}
+
+def updateSetpoints(data) {
+	def cmds = []
+	if (data.targetHeatingSetpoint) {
+		cmds << new physicalgraph.device.HubAction(zwave.thermostatSetpointV1.thermostatSetpointSet(
+					setpointType: 1, scale: state.scale, precision: state.precision, scaledValue: data.targetHeatingSetpoint).format())
+	}
+	if (data.targetCoolingSetpoint) {
+		cmds << new physicalgraph.device.HubAction(zwave.thermostatSetpointV1.thermostatSetpointSet(
+					setpointType: 2, scale: state.scale, precision: state.precision, scaledValue: data.targetCoolingSetpoint).format())
+	}
+    cmds << new physicalgraph.device.HubAction(zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1).format())
+    cmds << new physicalgraph.device.HubAction(zwave.thermostatOperatingStateV1.thermostatOperatingStateGet().format()) // Bug CT-XX doesn't report change in thermostat operating state
+
+	sendHubCommand(cmds)
+}
+
+// thermostatSetpoint is not displayed by any tile as it can't be predictable calculated due to
+// the device's quirkiness but it is defined by the capability so it must be set, set it to the most likely value
+def updateThermostatSetpoint(setpoint, value) {
+	def scale = getTemperatureScale()
+	def heatingSetpoint = (setpoint == "heatingSetpoint") ? value : getTempInLocalScale("heatingSetpoint")
+	def coolingSetpoint = (setpoint == "coolingSetpoint") ? value : getTempInLocalScale("coolingSetpoint")
+	def mode = device.currentValue("thermostatMode")
+	def thermostatSetpoint = heatingSetpoint    // corresponds to (mode == "heat" || mode == "emergency heat")
+	if (mode == "cool") {
+		thermostatSetpoint = coolingSetpoint
+	} else if (mode == "auto" || mode == "off") {
+		// Set thermostatSetpoint to the setpoint closest to the current temperature
+		def currentTemperature = getTempInLocalScale("temperature")
+		if (currentTemperature > (heatingSetpoint + coolingSetpoint)/2) {
+			thermostatSetpoint = coolingSetpoint
+		}
+	}
+	sendEvent(name: "thermostatSetpoint", value: thermostatSetpoint, unit: getTemperatureScale())
+}
+
+def switchMode() {
+	def currentMode = device.currentValue("thermostatMode")
+	def supportedModes = state.supportedModes
+	// Old version of supportedModes was as string, make sure it gets updated
+	if (supportedModes && supportedModes.size() && supportedModes[0].size() > 1) {
+		def next = { supportedModes[supportedModes.indexOf(it) + 1] ?: supportedModes[0] }
+		def nextMode = next(currentMode)
+		runIn(2, "setGetThermostatMode", [data: [nextMode: nextMode], overwrite: true])
+	} else {
+		log.warn "supportedModes not defined"
+		getSupportedModes()
+	}
+}
+
+def switchToMode(nextMode) {
+	def supportedModes = state.supportedModes
+	// Old version of supportedModes was as string, make sure it gets updated
+	if (supportedModes && supportedModes.size() && supportedModes[0].size() > 1) {
+		if (supportedModes.contains(nextMode)) {
+			runIn(2, "setGetThermostatMode", [data: [nextMode: nextMode], overwrite: true])
+		} else {
+			log.debug("ThermostatMode $nextMode is not supported by ${device.displayName}")
+		}
+	} else {
+		log.warn "supportedModes not defined"
+		getSupportedModes()
+	}
+}
+
+def getSupportedModes() {
+	def cmds = []
+	cmds << new physicalgraph.device.HubAction(zwave.thermostatModeV2.thermostatModeSupportedGet().format())
+	sendHubCommand(cmds)
+}
+
+def switchFanMode() {
+	def currentMode = device.currentValue("thermostatFanMode")
+	def supportedFanModes = state.supportedFanModes
+	// Old version of supportedFanModes was as string, make sure it gets updated
+	if (supportedFanModes && supportedFanModes.size() && supportedFanModes[0].size() > 1) {
+		def next = { supportedFanModes[supportedFanModes.indexOf(it) + 1] ?: supportedFanModes[0] }
+		def nextMode = next(currentMode)
+		runIn(2, "setGetThermostatFanMode", [data: [nextMode: nextMode], overwrite: true])
+	} else {
+		log.warn "supportedFanModes not defined"
+		getSupportedFanModes()
+	}
+}
+
+def switchToFanMode(nextMode) {
+	def supportedFanModes = state.supportedFanModes
+	// Old version of supportedFanModes was as string, make sure it gets updated
+	if (supportedFanModes && supportedFanModes.size() && supportedFanModes[0].size() > 1) {
+		if (supportedFanModes.contains(nextMode)) {
+			runIn(2, "setGetThermostatFanMode", [data: [nextMode: nextMode], overwrite: true])
+		} else {
+			log.debug("FanMode $nextMode is not supported by ${device.displayName}")
+		}
+	} else {
+		log.warn "supportedFanModes not defined"
+		getSupportedFanModes()
+	}
+}
+
+def getSupportedFanModes() {
+	def cmds = [new physicalgraph.device.HubAction(zwave.thermostatFanModeV3.thermostatFanModeSupportedGet().format())]
+	sendHubCommand(cmds)
+}
+
+def getModeMap() { [
+	"off": 0,
+	"heat": 1,
+	"cool": 2,
+	"auto": 3,
+	"emergency heat": 4
+]}
+
+def setThermostatMode(String value) {
+	switchToMode(value)
+}
+
+def setGetThermostatMode(data) {
+	def cmds = [new physicalgraph.device.HubAction(zwave.thermostatModeV2.thermostatModeSet(mode: modeMap[data.nextMode]).format()),
+			new physicalgraph.device.HubAction(zwave.thermostatModeV2.thermostatModeGet().format()),
+            new physicalgraph.device.HubAction(zwave.thermostatOperatingStateV1.thermostatOperatingStateGet().format())] // Get Operating mode, thermostat doesn't always report it
+	sendHubCommand(cmds)
+}
+
+def getFanModeMap() { [
+	"auto": 0,
+	"on": 1,
+	"circulate": 6
+]}
+
+def setThermostatFanMode(String value) {
+	switchToFanMode(value)
+}
+
+def setGetThermostatFanMode(data) {
+	def cmds = [new physicalgraph.device.HubAction(zwave.thermostatFanModeV3.thermostatFanModeSet(fanMode: fanModeMap[data.nextMode]).format()),
+			new physicalgraph.device.HubAction(zwave.thermostatFanModeV3.thermostatFanModeGet().format()),
+            new physicalgraph.device.HubAction(zwave.thermostatOperatingStateV1.thermostatOperatingStateGet().format())] // Get Operating mode, thermostat doesn't always report it
+	sendHubCommand(cmds)
+}
+
+def off() {
+	switchToMode("off")
+}
+
+def heat() {
+	switchToMode("heat")
+}
+
+def emergencyHeat() {
+	switchToMode("emergency heat")
+}
+
+def cool() {
+	switchToMode("cool")
+}
+
+def auto() {
+	switchToMode("auto")
+}
+
+def fanOn() {
+	switchToFanMode("on")
+}
+
+def fanAuto() {
+	switchToFanMode("auto")
+}
+
+def fanCirculate() {
+	switchToFanMode("circulate")
+}
+
+// Get stored temperature from currentState in current local scale
+def getTempInLocalScale(state) {
+	def temp = device.currentState(state)
+	if (temp && temp.value && temp.unit) {
+		return getTempInLocalScale(temp.value.toBigDecimal(), temp.unit)
+	}
+	return 0
+}
+
+// get/convert temperature to current local scale
+def getTempInLocalScale(temp, scale) {
+	if (temp && scale) {
+		def scaledTemp = convertTemperatureIfNeeded(temp.toBigDecimal(), scale).toDouble()
+		return (getTemperatureScale() == "F" ? scaledTemp.round(0).toInteger() : roundC(scaledTemp))
+	}
+	return 0
+}
+
+def getTempInDeviceScale(state) {
+	def temp = device.currentState(state)
+	if (temp && temp.value && temp.unit) {
+		return getTempInDeviceScale(temp.value.toBigDecimal(), temp.unit)
+	}
+	return 0
+}
+
+def getTempInDeviceScale(temp, scale) {
+	if (temp && scale) {
+		def deviceScale = (state.scale == 1) ? "F" : "C"
+		return (deviceScale == scale) ? temp :
+				(deviceScale == "F" ? celsiusToFahrenheit(temp).toDouble().round(0).toInteger() : roundC(fahrenheitToCelsius(temp)))
+	}
+	return 0
+}
+
+def roundC (tempC) {
+	return (Math.round(tempC.toDouble() * 2))/2
 }
 
 private checkThermostatModel() {
     switch (state.MSR) {
+        case "008B-5452-5433": // Trane Z-Wave Thermostat
+            log.debug "Found Trane Z-Wave Thermostat"
+            sendEvent(name:"thermostatModel", value:"Trane", displayed: true)
+            break
+
         case "5254-0200-8031": // ZTS-110
-        log.debug "Found ZTS-110 Thermostat"
-        sendEvent(name:"thermostatModel", value:"ZTS-110", displayed: true)
-        break
+            log.debug "Found ZTS-110 Thermostat"
+            sendEvent(name:"thermostatModel", value:"ZTS-110", displayed: true)
+            break
 
         case "0098-6401-0107": //CT-100
         case "0098-6401-0106": //CT-100 Vivint
-        log.debug "Found CT-100 Thermostat"
-        sendEvent(name:"thermostatModel", value:"CT-100", displayed: true)
-        break
+            log.debug "Found CT-100 Thermostat"
+            sendEvent(name:"thermostatModel", value:"CT-100", displayed: true)
+            break
 
         case "0098-6501-000C": //CT-101 (lowe's model)
-        log.debug "Found CT-101 Thermostat"
-        sendEvent(name:"thermostatModel", value:"CT-101", displayed: true)
-        break
+            log.debug "Found CT-101 Thermostat"
+            sendEvent(name:"thermostatModel", value:"CT-101", displayed: true)
+            break
 
         case "0098-1E10-0158": //CT-30
         case "0098-1E12-015C": //CT-30e
         case "0098-0000-0000": //CT-30 (local alarm company model)
         case "0098-1E12-015E": //CT-30 Rev C1
         case "0098-0001-001E": //CT-30 APX
-        log.debug "Found CT-30 Thermostat"
-        sendEvent(name:"thermostatModel", value:"CT-30", displayed: true)
-        break
+        case "0098-0001-0000": //CT-30 Amazon Brown Box
+        case "0098-0001-00FF": //CT-30 Amazon Brown Box
+            log.debug "Found CT-30 Thermostat"
+            sendEvent(name:"thermostatModel", value:"CT-30", displayed: true)
+            break
 
         default:
             log.debug "Unknown thermostat with MSR $state.MSR"
-        sendEvent(name:"thermostatModel", value:"Unknown thermostat with MSR $state.MSR", displayed: true)
-        break
+            sendEvent(name:"thermostatModel", value:"Unknown thermostat with MSR $state.MSR", displayed: true)
+            break
     }
 }
 
@@ -1008,31 +1177,6 @@ private setClock() {	// once a day
         sendEvent(name: "SetClock", value: "setting clock to ${nowCal.getTime().format("EEE MMM dd yyyy HH:mm:ss z", timeZone)}", displayed: true)
         zwave.clockV1.clockSet(hour: nowCal.get(Calendar.HOUR_OF_DAY), minute: nowCal.get(Calendar.MINUTE), weekday: nowCal.get(Calendar.DAY_OF_WEEK)).format()
     } else "delay 87"
-}
-
-def refresh() {
-    // Force a refresh
-    log.info "Requested a refresh"
-    state.lastBatteryGet = (new Date().time) - (1440 * 60000)
-    state.lastClockSet = (new Date().time) - (1440 * 60000)
-    state.lastPollGet = (new Date().time) - (30 * 60000)
-
-    // Identify and configure the thermostat
-    if (!state.MSR) { // If we don't have a MSR, first get it (and wait for it to complete)
-        log.debug "Getting Device MSR"
-        delayBetween([
-            zwave.manufacturerSpecificV2.manufacturerSpecificGet().format(),
-            zwave.versionV1.versionGet().format(),
-            poll()
-        ], 2000)
-    } else {
-        log.trace "Device MSR: $state.MSR"
-        delayBetween([
-            poll()
-        ], 2000)
-    }
-
-    // NOTHING AFTER THIS AS THE ZWAVE NEEDS TO BE RETURNED TO BE EXECUTED
 }
 
 def setConfigParameters() {
@@ -1274,153 +1418,11 @@ def discoverConfigParameters() {
     delayBetween(cmds, 2000)
 }
 
-def coolLevelUp() {
-    def locationScale = getTemperatureScale()
-    def maxTemp
-    def minTemp
-    if (locationScale == "C") {
-        maxTemp = 37 // Max Temp in C
-        minTemp = 1 // Min Temp in C
-        log.trace "Location is in Celsius, MaxTemp $maxTemp, MinTemp $minTemp"
-    } else {
-        maxTemp = 99 // Max temp in F
-        minTemp = 35 // Max temp in F
-        log.trace "Location is in Farenheit, MaxTemp $maxTemp, MinTemp $minTemp"
-    }
-
-    int nextLevel = device.currentValue("coolingSetpoint") + 1
-
-    if( nextLevel > maxTemp) {
-        nextLevel = maxTemp
-    }
-    log.debug "Setting cool set point up to: ${nextLevel}"
-    quickSetCool(nextLevel)
+// Legacy for backward compatibility
+def quickSetCool(degrees) {
+    setCoolingSetpoint(degrees)
 }
 
-def coolLevelDown() {
-    def locationScale = getTemperatureScale()
-    def maxTemp
-    def minTemp
-    if (locationScale == "C") {
-        maxTemp = 37 // Max Temp in C
-        minTemp = 1 // Min Temp in C
-        log.trace "Location is in Celsius, MaxTemp $maxTemp, MinTemp $minTemp"
-    } else {
-        maxTemp = 99 // Max temp in F
-        minTemp = 35 // Max temp in F
-        log.trace "Location is in Farenheit, MaxTemp $maxTemp, MinTemp $minTemp"
-    }
-
-    int nextLevel = device.currentValue("coolingSetpoint") - 1
-
-    if( nextLevel < minTemp) {
-        nextLevel = minTemp
-    }
-    log.debug "Setting cool set point down to: ${nextLevel}"
-    quickSetCool(nextLevel)
-}
-
-def heatLevelUp() {
-    def locationScale = getTemperatureScale()
-    def maxTemp
-    def minTemp
-    if (locationScale == "C") {
-        maxTemp = 37 // Max Temp in C
-        minTemp = 1 // Min Temp in C
-        log.trace "Location is in Celsius, MaxTemp $maxTemp, MinTemp $minTemp"
-    } else {
-        maxTemp = 99 // Max temp in F
-        minTemp = 35 // Max temp in F
-        log.trace "Location is in Farenheit, MaxTemp $maxTemp, MinTemp $minTemp"
-    }
-
-    int nextLevel = device.currentValue("heatingSetpoint") + 1
-
-    if( nextLevel > maxTemp) {
-        nextLevel = maxTemp
-    }
-    log.debug "Setting heat set point up to: ${nextLevel}"
-    quickSetHeat(nextLevel)
-}
-
-def heatLevelDown() {
-    def locationScale = getTemperatureScale()
-    def maxTemp
-    def minTemp
-    if (locationScale == "C") {
-        maxTemp = 37 // Max Temp in C
-        minTemp = 1 // Min Temp in C
-        log.trace "Location is in Celsius, MaxTemp $maxTemp, MinTemp $minTemp"
-    } else {
-        maxTemp = 99 // Max temp in F
-        minTemp = 35 // Max temp in F
-        log.trace "Location is in Farenheit, MaxTemp $maxTemp, MinTemp $minTemp"
-    }
-
-    int nextLevel = device.currentValue("heatingSetpoint") - 1
-
-    if( nextLevel < minTemp) {
-        nextLevel = minTemp
-    }
-    log.debug "Setting heat set point down to: ${nextLevel}"
-    quickSetHeat(nextLevel)
-}
-
-def levelUp() {
-    log.trace "Level Up called"
-    levelUpDown(1)
-}
-
-def levelDown() {
-    log.trace "Level Down called"
-    levelUpDown(-1)
-}
-
-def levelUpDown(value) {
-    log.trace "levelUpDown called with value $value, current thermostat mode ${device.currentState("thermostatMode")?.value}"
-
-    // NOTE: Bug in ST platform, for iOS devices we only get 0 (down) and 1 (up) for this control
-    // For Android devices we get an absolute number showing the number of times up/down have been called since the page was opened (e.g. called up 4 times we get +4, if down then we get +3). If you open the page again and press up you get +1, if you close and open again and press down you get -1 (and the as long as the page is open it will be cumulative)
-
-    // Determine which OS based on value behaviors (urrgghhh.....ST!)
-    def upLevel
-    if (!state.lastLevelUpDown)
-    state.lastLevelUpDown = 0 // If it isn't defined lets baseline it
-
-    if ((state.lastLevelUpDown == 1) && (value == 1)) // Last time it was 1 and again it's 1 its increase
-    upLevel = true
-    else if ((state.lastLevelUpDown == 0) && (value == 0)) // Last time it was 0 and again it's 0 then it's decrease
-        upLevel = false
-    else if ((state.lastLevelUpDown == -1) && (value == -1)) // Last time it was -1 and again it's -1 then it's decrease
-        upLevel = false
-    else if ((value - state.lastLevelUpDown) > 0) // If it's increasing then it's up
-        upLevel = true
-    else if ((value - state.lastLevelUpDown) < 0) // If it's decreasing then it's down
-        upLevel = false
-    else
-        log.error "UNDEFINED STATE, CONTACT DEVELOPER. Last level $state.lastLevelUpDown, Current level, $value"
-
-    state.lastLevelUpDown = value // Save it
-
-    if (upLevel) { // Increase the current temperature (check heating or cooling mode)
-        log.debug "Increasing temperature by 1°"
-        if (device.currentState("thermostatMode")?.value.contains("auto")) { // Auto we dont' know current mode, so change heat and cool
-            delayBetween([heatLevelUp(), coolLevelUp()], 5000)
-        } else if (device.currentState("thermostatMode")?.value.contains("heat")) {
-            heatLevelUp()
-        } else if (device.currentState("thermostatMode")?.value.contains("cool")) {
-            coolLevelUp()
-        }
-    } else {
-        log.debug "Reducing temperature by 1°"
-        if (device.currentState("thermostatMode")?.value.contains("auto")) { // Auto we dont' know current mode, so change heat and cool
-            delayBetween([heatLevelDown(), coolLevelDown()], 5000)
-        } else if (device.currentState("thermostatMode")?.value.contains("heat")) {
-            heatLevelDown()
-        } else if (device.currentState("thermostatMode")?.value.contains("cool")) {
-            coolLevelDown()
-        }
-    }
-
-    // NOTHING AFTER THE COMMANDS OR THE COMMANDS WONT WORK
+def quickSetHeat(degrees) {
+    setHeatingSetpoint(degrees)
 }

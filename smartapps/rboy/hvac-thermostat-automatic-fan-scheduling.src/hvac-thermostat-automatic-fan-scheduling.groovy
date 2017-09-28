@@ -11,15 +11,17 @@
 */ 
 
 def clientVersion() {
-    return "1.0.4"
+    return "01.02.00"
 }
 
 /**
 * Schedule HVAC Fan
 *
-* Copyright RBoy
-* Redistribution of any changes or code is not allowed without permission
+* Copyright RBoy Apps, redistribution or reuse of code is not allowed without permission
+*
 * Change log:
+* 2017-9-6 - (v01.02.00) Added support for expirations past midnight
+* 2017-5-26 - (v01.01.00) Added support for automatic update notifications
 * 2016-5-19 - If end time is after start time then assume the end time is next day
 * 2016-5-15 - Notify use if timezone/location is missing in setup 
 * 2015-6-17 - Fix for changes in ST Platform
@@ -28,7 +30,7 @@ def clientVersion() {
 definition(
     name: "HVAC Thermostat Automatic Fan Scheduling",
     namespace: "rboy",
-    author: "RBoy",
+    author: "RBoy Apps",
     description: "Setup a schedule to turn your thermostat fan on and off",
     category: "Green Living",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/GreenLiving/Cat-GreenLiving.png",
@@ -71,6 +73,11 @@ preferences {
             ],
             defaultValue: 'All Week'
     }
+
+    section() {
+        label title: "Assign a name for this SmartApp (optional)", required: false
+        input name: "disableUpdateNotifications", title: "Don't check for new versions of the app", type: "bool", required: false
+    }
 }
 
 def installed() {
@@ -95,6 +102,13 @@ def initialize() {
         log.error "Hub timeZone not set, using ${timeZone.getDisplayName()} timezone. Please set Hub location and timezone for the codes to work accurately"
         sendPush "Hub timeZone not set, using ${timeZone.getDisplayName()} timezone. Please set Hub location and timezone for the codes to work accurately"
     }
+
+    // Check for new versions of the code
+    def random = new Random()
+    Integer randomHour = random.nextInt(18-10) + 10
+    Integer randomDayOfWeek = random.nextInt(7-1) + 1 // 1 to 7
+    schedule("0 0 " + randomHour + " ? * " + randomDayOfWeek, checkForCodeUpdate) // Check for code updates once a week at a random day and time between 10am and 6pm
+
     runIn(1, onHandler)
 }
 
@@ -159,8 +173,16 @@ def checkSchedule() {
         def scheduledEnd = timeToday(endTime, timeZone)
         
         if (scheduledEnd <= scheduledStart) { // End time is next day
-            log.debug "End time is before start time, assuming it is the next day"
-            scheduledEnd = scheduledEnd.next() // Get the time for tomorrow
+            def localHour = currentDT.getHours() + (int)(timeZone.getOffset(currentDT.getTime()) / 1000 / 60 / 60)
+            //log.trace "Local hour is $localHour"
+            if (( localHour >= 0) && (localHour < 12)) // If we between midnight and midday
+            {
+                log.debug "End time is before start time and we are past midnight, assuming start time is previous day"
+                scheduledStart = scheduledStart.previous() // Get the start time for yesterday
+            } else {
+                log.debug "End time is before start time and we are past midday, assuming end time is the next day"
+                scheduledEnd = scheduledEnd.next() // Get the end time for tomorrow
+            }
         }
 
         log.debug("Operating Start ${scheduledStart.format("EEE MMM dd yyyy HH:mm z", timeZone)}, End ${scheduledEnd.format("EEE MMM dd yyyy HH:mm z", timeZone)}")
@@ -215,5 +237,66 @@ def checkSchedule() {
     else {
         log.info("Outside operating schedule")
         return false
+    }
+}
+
+def checkForCodeUpdate(evt) {
+    log.trace "Getting latest version data from the RBoy Apps server"
+    
+    def appName = "HVAC Thermostat Automatic Fan Scheduling"
+    def serverUrl = "http://smartthings.rboyapps.com"
+    def serverPath = "/CodeVersions.json"
+    
+    try {
+        httpGet([
+            uri: serverUrl,
+            path: serverPath
+        ]) { ret ->
+            log.trace "Received response from RBoy Apps Server, headers=${ret.headers.'Content-Type'}, status=$ret.status"
+            //ret.headers.each {
+            //    log.trace "${it.name} : ${it.value}"
+            //}
+
+            if (ret.data) {
+                log.trace "Response>" + ret.data
+                
+                // Check for app version updates
+                def appVersion = ret.data?."$appName"
+                if (appVersion > clientVersion()) {
+                    def msg = "New version of app ${app.label} available: $appVersion, current version: ${clientVersion()}.\nPlease visit $serverUrl to get the latest version."
+                    log.info msg
+                    if (!disableUpdateNotifications) {
+                        sendPush(msg)
+                    }
+                } else {
+                    log.trace "No new app version found, latest version: $appVersion"
+                }
+                
+                // Check device handler version updates
+                def caps = [ thermostats ]
+                caps?.each {
+                    def devices = it?.findAll { it.hasAttribute("codeVersion") }
+                    for (device in devices) {
+                        if (device) {
+                            def deviceName = device?.currentValue("dhName")
+                            def deviceVersion = ret.data?."$deviceName"
+                            if (deviceVersion && (deviceVersion > device?.currentValue("codeVersion"))) {
+                                def msg = "New version of device ${device?.displayName} available: $deviceVersion, current version: ${device?.currentValue("codeVersion")}.\nPlease visit $serverUrl to get the latest version."
+                                log.info msg
+                                if (!disableUpdateNotifications) {
+                                    sendPush(msg)
+                                }
+                            } else {
+                                log.trace "No new device version found for $deviceName, latest version: $deviceVersion, current version: ${device?.currentValue("codeVersion")}"
+                            }
+                        }
+                    }
+                }
+            } else {
+                log.error "No response to query"
+            }
+        }
+    } catch (e) {
+        log.error "Exception while querying latest app version: $e"
     }
 }
