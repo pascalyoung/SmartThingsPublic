@@ -11,7 +11,7 @@
  */ 
 
 def clientVersion() {
-    return "02.05.01"
+    return "02.05.03"
 }
  
 /**
@@ -19,6 +19,8 @@ def clientVersion() {
  *
  * Copyright RBoy Apps, redistribution or reuse of code is not allowed without permission
  *
+ * 2017-11-13 - (v02.05.03) Optimization, don't loop through mode settings which aren't current
+ * 2017-11-12 - (v02.05.02) Fix for remote temperature sensor with multiple modes
  * 2017-9-9 - (v02.05.01) Updated min temp to 60F for better GoControl thermostat compatibility
  * 2017-9-5 - (v02.05.00) Updated min/max thresholds for remote sensors to be compatible with new ST thermostat device handler (deadZones)
  * 2017-2-1 - (v2.4.1) Bugfix for temporary hold when using remote temperature sensors
@@ -149,7 +151,7 @@ def subscribeToEvents() {
 
 // Handle manual changes in thermostat setpoint for temporary Hold mode when using remote sensors
 def thermostatSetTempHandler(evt) {
-    log.debug "Recevied temperature set notification from ${evt.device.displayName}, name: ${evt.name}, value: ${evt.value}"
+    log.debug "Received temperature set notification from ${evt.device.displayName}, name: ${evt.name}, value: ${evt.value}, mode: ${location.mode}"
 
 	// Since we are manually entering the mode, check the mode before continuing since these aren't registered with the system (thanks @bravenel)
     if (modes && !modes.contains(location.mode)) {
@@ -161,6 +163,9 @@ def thermostatSetTempHandler(evt) {
     def maxModes = multiTempModes ? (modes == null ? 1 : modes.size()) : 1
     for (int j = 0; j < maxModes; j++) {
         def modeName = multiTempModes ? (modes == null ? "All" : modes[j]) : "All"
+        if (modes && !modes[j]?.contains(location.mode)) {
+            continue // this isn't our mode, ignore it
+        }
         def maxThermostats = multiTempThermostat ? thermostats.size() : 1
         for (int i = 0; i < maxThermostats; i++) {
             if(thermostats[i].displayName.contains(evt.device.displayName)) {
@@ -206,7 +211,7 @@ def thermostatSetTempHandler(evt) {
 
 // Handle remote temp sensor, set temperature if using a remote sensor
 def remoteChangeHandler(evt) {
-    log.debug "Reinitializing thermostat on remote sensor ${evt.device.displayName} temp change notification, name: ${evt.name}, value: ${evt.value}"
+    log.debug "Reinitializing thermostat on remote sensor ${evt.device.displayName} temp change notification, name: ${evt.name}, value: ${evt.value}, mode: ${location.mode}"
 
 	// Since we are manually entering the mode, check the mode before continuing since these aren't registered with the system (thanks @bravenel)
     if (modes && !modes.contains(location.mode)) {
@@ -217,9 +222,12 @@ def remoteChangeHandler(evt) {
     // Lets find which thermostats are linked to this sensor and then update thermostat settings accordingly
     def maxModes = multiTempModes ? (modes == null ? 1 : modes.size()) : 1
     for (int j = 0; j < maxModes; j++) {
+        if (modes && !modes[j]?.contains(location.mode)) {
+            continue // this isn't our mode, ignore it
+        }
         def maxThermostats = multiTempThermostat ? thermostats.size() : 1
         for (int i = 0; i < maxThermostats; i++) {
-            if(settings."remoteTemperatureSensor${i}${j}"*.displayName.contains(evt.device.displayName)) {
+            if(settings."remoteTemperatureSensor${i}${j}"*.displayName?.contains(evt.device.displayName)) {
                 if (atomicState."holdTemp${thermostats[i]}") { // If we are on hold temp mode then ignore temperature changes since user has put it on hold mode
                     log.trace "Thermostat ${thermostats[i]} is in hold temperature mode, not making any changes to thermostat based on remote temp sensor"
                 } else {
